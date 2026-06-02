@@ -11,15 +11,20 @@ interface DistributionGraphProps {
 }
 
 const GRAPH_WIDTH = 720;
-const GRAPH_HEIGHT = 248;
+const GRAPH_HEIGHT = 324;
 const LEFT = 56;
 const RIGHT = 24;
-const TOP = 24;
-const ANGLE_Y = 56;
-const PROFILE_TOP = 112;
-const PROFILE_BOTTOM = 178;
-const STEP_TOP = 220;
-const STEP_BOTTOM = 238;
+const TOP = 26;
+const ANGLE_Y = 62;
+const ANGLE_VALUE_Y = 92;
+const PROFILE_TITLE_Y = 126;
+const PROFILE_LEGEND_Y = 150;
+const PROFILE_TOP = 168;
+const PROFILE_BOTTOM = 236;
+const PROFILE_INDEX_Y = 258;
+const STEP_TITLE_Y = 286;
+const STEP_TOP = 300;
+const STEP_BOTTOM = 318;
 
 function scaleValue(value: number, min: number, max: number, start: number, end: number): number {
   if (Math.abs(max - min) < 1e-12) {
@@ -118,25 +123,32 @@ export function buildDistributionGraphSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}" role="img" aria-label="${escapeXml(text.aria)}">
   <style>
-    .graph-bg{fill:#f8fafc}.graph-axis{stroke:#cbd5e1;stroke-width:1}.graph-grid{stroke:#e2e8f0;stroke-width:1}.graph-label{font:12px system-ui,sans-serif;fill:#344256}.graph-muted{font:13px system-ui,sans-serif;fill:#657386}.graph-angle-gap{stroke:#94a3b8;stroke-width:2;stroke-linecap:round}.graph-angle-dot{fill:#f97316;stroke:#7c2d12;stroke-width:1.2}.graph-x{fill:none;stroke:#0f766e;stroke-width:2.4}.graph-y{fill:none;stroke:#7c3aed;stroke-width:2.4}.graph-step-bar{fill:#14b8a6;opacity:.72}
+    .graph-bg{fill:#f8fafc}.graph-axis{stroke:#cbd5e1;stroke-width:1}.graph-grid{stroke:#e2e8f0;stroke-width:1}.graph-label{font:12px system-ui,sans-serif;fill:#344256}.graph-muted{font:13px system-ui,sans-serif;fill:#657386}.graph-angle-gap{stroke:#94a3b8;stroke-width:2;stroke-linecap:round}.graph-angle-dot{fill:#f97316;stroke:#7c2d12;stroke-width:1.2}.graph-x{fill:none;stroke:#0f766e;stroke-width:2.4}.graph-y{fill:none;stroke:#7c3aed;stroke-width:2.4}.graph-step-bar{fill:#14b8a6;opacity:.72}.graph-legend-chip{fill:#ffffff;stroke:#cbd5e1;stroke-width:1}.graph-legend-swatch{stroke-linecap:round;stroke-width:2.4}
   </style>
   <rect class="graph-bg" width="${GRAPH_WIDTH}" height="${GRAPH_HEIGHT}"/>
-  <text class="graph-label" x="${LEFT}" y="${TOP}">${escapeXml(text.angleTitle)}</text>
+  <text class="graph-label" data-graph-label="angle-title" x="${LEFT}" y="${TOP}">${escapeXml(text.angleTitle)}</text>
   <line class="graph-axis" x1="${LEFT}" y1="${ANGLE_Y}" x2="${GRAPH_WIDTH - RIGHT}" y2="${ANGLE_Y}"/>
   ${angleConnectors}
   ${angleDots}
-  <text class="graph-muted" x="${LEFT}" y="${ANGLE_Y + 24}">${formatNumber(minAngle, precision)} deg</text>
-  <text class="graph-muted" x="${GRAPH_WIDTH - RIGHT}" y="${ANGLE_Y + 24}" text-anchor="end">${formatNumber(maxAngle, precision)} deg</text>
-  <text class="graph-label" x="${LEFT}" y="${PROFILE_TOP - 14}">${escapeXml(text.profileTitle)}</text>
+  <text class="graph-muted" data-graph-label="angle-min" x="${LEFT}" y="${ANGLE_VALUE_Y}">${formatNumber(minAngle, precision)} deg</text>
+  <text class="graph-muted" data-graph-label="angle-max" x="${GRAPH_WIDTH - RIGHT}" y="${ANGLE_VALUE_Y}" text-anchor="end">${formatNumber(maxAngle, precision)} deg</text>
+  <text class="graph-label" data-graph-label="profile-title" x="${LEFT}" y="${PROFILE_TITLE_Y}">${escapeXml(text.profileTitle)}</text>
+  <g class="graph-legend" data-graph-section="xy-legend">
+    <rect class="graph-legend-chip" x="${LEFT}" y="${PROFILE_LEGEND_Y - 14}" width="54" height="20" rx="4"/>
+    <line class="graph-x graph-legend-swatch" x1="${LEFT + 9}" y1="${PROFILE_LEGEND_Y - 6}" x2="${LEFT + 25}" y2="${PROFILE_LEGEND_Y - 6}"/>
+    <text class="graph-label" data-graph-label="legend-x" x="${LEFT + 34}" y="${PROFILE_LEGEND_Y - 2}">X</text>
+    <rect class="graph-legend-chip" x="${LEFT + 62}" y="${PROFILE_LEGEND_Y - 14}" width="54" height="20" rx="4"/>
+    <line class="graph-y graph-legend-swatch" x1="${LEFT + 71}" y1="${PROFILE_LEGEND_Y - 6}" x2="${LEFT + 87}" y2="${PROFILE_LEGEND_Y - 6}"/>
+    <text class="graph-label" data-graph-label="legend-y" x="${LEFT + 96}" y="${PROFILE_LEGEND_Y - 2}">Y</text>
+  </g>
   <line class="graph-grid" x1="${LEFT}" y1="${PROFILE_TOP}" x2="${GRAPH_WIDTH - RIGHT}" y2="${PROFILE_TOP}"/>
   <line class="graph-grid" x1="${LEFT}" y1="${(PROFILE_TOP + PROFILE_BOTTOM) / 2}" x2="${GRAPH_WIDTH - RIGHT}" y2="${(PROFILE_TOP + PROFILE_BOTTOM) / 2}"/>
   <line class="graph-grid" x1="${LEFT}" y1="${PROFILE_BOTTOM}" x2="${GRAPH_WIDTH - RIGHT}" y2="${PROFILE_BOTTOM}"/>
   <polyline class="graph-x" data-series="origin-x" points="${xLine}"/>
   <polyline class="graph-y" data-series="origin-y" points="${yLine}"/>
-  <text class="graph-muted" x="${LEFT}" y="${PROFILE_BOTTOM + 16}">0</text>
-  <text class="graph-muted" x="${GRAPH_WIDTH - RIGHT}" y="${PROFILE_BOTTOM + 16}" text-anchor="end">${last.index}</text>
-  <text class="graph-label" x="${GRAPH_WIDTH - RIGHT - 74}" y="${PROFILE_TOP - 14}"><tspan fill="#0f766e">X</tspan> / <tspan fill="#7c3aed">Y</tspan></text>
-  <text class="graph-label" x="${LEFT}" y="${STEP_TOP - 8}">${escapeXml(text.adjacentStep)}</text>
+  <text class="graph-muted" data-graph-label="profile-index-start" x="${LEFT}" y="${PROFILE_INDEX_Y}">0</text>
+  <text class="graph-muted" data-graph-label="profile-index-end" x="${GRAPH_WIDTH - RIGHT}" y="${PROFILE_INDEX_Y}" text-anchor="end">${last.index}</text>
+  <text class="graph-label" data-graph-label="step-title" x="${LEFT}" y="${STEP_TITLE_Y}">${escapeXml(text.adjacentStep)}</text>
   ${stepBars}
 </svg>`;
 }

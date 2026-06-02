@@ -471,8 +471,8 @@ label {
   display: block;
   width: 100%;
   height: auto;
-  min-height: 170px;
-  max-height: 230px;
+  min-height: 220px;
+  max-height: min(62vh, 324px);
 }
 
 .table-heading {
