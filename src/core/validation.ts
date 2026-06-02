@@ -1,4 +1,4 @@
-import type { PlacementSettings, ValidationMessage, ValidationResult } from '../types';
+import type { NumericExpressionField, PlacementSettings, ValidationMessage, ValidationResult } from '../types';
 import { calculateDerivedGeometry, calculateStepAngle } from './geometry';
 import { parseIndividualAngles } from './individualAngles';
 import { parseNumericExpression } from './expression';
@@ -15,6 +15,35 @@ function add(
   message: string,
 ): void {
   messages.push({ severity, field, message });
+}
+
+function rotationModeUsesOffset(settings: PlacementSettings): boolean {
+  return settings.rotation.mode !== 'fixed' && settings.rotation.mode !== 'customFormulaSimple';
+}
+
+function isNumericFieldRelevant(settings: PlacementSettings, field: NumericExpressionField): boolean {
+  switch (field) {
+    case 'startAngleDeg':
+    case 'startAngleOffsetDeg':
+      return settings.angleMode !== 'individualAngles';
+    case 'endAngleDeg':
+      return settings.angleMode === 'arc';
+    case 'stepAngleDeg':
+      return settings.angleMode === 'customStep';
+    case 'decimalPlaces':
+      return settings.outputPrecisionMode === 'decimalPlaces';
+    case 'significantDigits':
+      return settings.outputPrecisionMode === 'significantDigits';
+    case 'rotation.fixedRotationDeg':
+      return settings.rotation.mode === 'fixed';
+    case 'rotation.rotationOffsetDeg':
+      return rotationModeUsesOffset(settings);
+    case 'rotation.formulaA':
+    case 'rotation.formulaB':
+      return settings.rotation.mode === 'customFormulaSimple';
+    default:
+      return true;
+  }
 }
 
 export function validateSettings(settings: PlacementSettings): ValidationResult {
@@ -36,30 +65,34 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
     add(messages, 'error', 'centerY', 'Center Y must be a finite number.');
   }
 
-  if (!finiteNumber(settings.startAngleDeg)) {
+  if (isNumericFieldRelevant(settings, 'startAngleDeg') && !finiteNumber(settings.startAngleDeg)) {
     add(messages, 'error', 'startAngleDeg', 'Start angle must be a finite number.');
   }
 
-  if (!finiteNumber(settings.startAngleOffsetDeg)) {
+  if (isNumericFieldRelevant(settings, 'startAngleOffsetDeg') && !finiteNumber(settings.startAngleOffsetDeg)) {
     add(messages, 'error', 'startAngleOffsetDeg', 'Start angle offset must be a finite number.');
   }
 
-  if (!finiteNumber(settings.endAngleDeg)) {
+  if (isNumericFieldRelevant(settings, 'endAngleDeg') && !finiteNumber(settings.endAngleDeg)) {
     add(messages, 'error', 'endAngleDeg', 'Arc end angle must be a finite number.');
   }
 
-  if (!finiteNumber(settings.stepAngleDeg)) {
+  if (isNumericFieldRelevant(settings, 'stepAngleDeg') && !finiteNumber(settings.stepAngleDeg)) {
     add(messages, 'error', 'stepAngleDeg', 'Step angle must be a finite number.');
   }
 
-  if (!Number.isInteger(settings.decimalPlaces) || settings.decimalPlaces < 0 || settings.decimalPlaces > 9) {
+  if (
+    isNumericFieldRelevant(settings, 'decimalPlaces') &&
+    (!Number.isInteger(settings.decimalPlaces) || settings.decimalPlaces < 0 || settings.decimalPlaces > 9)
+  ) {
     add(messages, 'error', 'decimalPlaces', 'Decimal places must be an integer from 0 to 9.');
   }
 
   if (
-    !Number.isInteger(settings.significantDigits) ||
-    settings.significantDigits < 1 ||
-    settings.significantDigits > 12
+    isNumericFieldRelevant(settings, 'significantDigits') &&
+    (!Number.isInteger(settings.significantDigits) ||
+      settings.significantDigits < 1 ||
+      settings.significantDigits > 12)
   ) {
     add(messages, 'error', 'significantDigits', 'Significant digits must be an integer from 1 to 12.');
   }
@@ -72,19 +105,25 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
     add(messages, 'error', 'refPadding', 'Reference padding must be an integer from 0 to 8.');
   }
 
-  if (!finiteNumber(settings.rotation.fixedRotationDeg)) {
+  if (
+    isNumericFieldRelevant(settings, 'rotation.fixedRotationDeg') &&
+    !finiteNumber(settings.rotation.fixedRotationDeg)
+  ) {
     add(messages, 'error', 'fixedRotationDeg', 'Fixed rotation must be a finite number.');
   }
 
-  if (!finiteNumber(settings.rotation.rotationOffsetDeg)) {
+  if (
+    isNumericFieldRelevant(settings, 'rotation.rotationOffsetDeg') &&
+    !finiteNumber(settings.rotation.rotationOffsetDeg)
+  ) {
     add(messages, 'error', 'rotationOffsetDeg', 'Rotation offset must be a finite number.');
   }
 
-  if (!finiteNumber(settings.rotation.formulaA)) {
+  if (isNumericFieldRelevant(settings, 'rotation.formulaA') && !finiteNumber(settings.rotation.formulaA)) {
     add(messages, 'error', 'formulaA', 'Rotation formula coefficient a must be a finite number.');
   }
 
-  if (!finiteNumber(settings.rotation.formulaB)) {
+  if (isNumericFieldRelevant(settings, 'rotation.formulaB') && !finiteNumber(settings.rotation.formulaB)) {
     add(messages, 'error', 'formulaB', 'Rotation formula coefficient b must be a finite number.');
   }
 
@@ -98,7 +137,7 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
 
   for (const field of NUMERIC_EXPRESSION_FIELDS) {
     const expression = settings.inputExpressions[field];
-    if (expression === undefined) {
+    if (expression === undefined || !isNumericFieldRelevant(settings, field)) {
       continue;
     }
 

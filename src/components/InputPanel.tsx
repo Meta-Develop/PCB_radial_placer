@@ -29,7 +29,6 @@ interface NumericInputProps {
   settings: PlacementSettings;
   onChange: (settings: PlacementSettings) => void;
   language: Language;
-  disabled?: boolean;
   help?: string;
 }
 
@@ -57,7 +56,6 @@ function NumericExpressionInput({
   settings,
   onChange,
   language,
-  disabled = false,
   help,
 }: NumericInputProps) {
   const rawValue = settings.inputExpressions[field] ?? formatInputNumber(getNumericFieldValue(settings, field));
@@ -104,7 +102,6 @@ function NumericExpressionInput({
         type="text"
         inputMode="decimal"
         spellCheck={false}
-        disabled={disabled}
         value={rawValue}
         aria-invalid={invalid ? 'true' : undefined}
         onChange={(event) => updateRawValue(event.target.value)}
@@ -118,6 +115,9 @@ function NumericExpressionInput({
 
 export function InputPanel({ settings, onChange, language, text }: InputPanelProps) {
   const isIndividualAngles = settings.angleMode === 'individualAngles';
+  const rotationUsesOffset =
+    settings.rotation.mode !== 'fixed' && settings.rotation.mode !== 'customFormulaSimple';
+  const rotationUsesCustomFormula = settings.rotation.mode === 'customFormulaSimple';
   const individualAngles = parseIndividualAngles(settings.individualAnglesText);
   const individualAnglesInvalid = isIndividualAngles && individualAngles.errors.length > 0;
 
@@ -139,14 +139,13 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
     onChange({ ...settings, rotation: { ...settings.rotation, [key]: value } });
   };
 
-  const numericInput = (field: NumericExpressionField, label: string, disabled = false, help?: string) => (
+  const numericInput = (field: NumericExpressionField, label: string, help?: string) => (
     <NumericExpressionInput
       field={field}
       label={label}
       settings={settings}
       onChange={onChange}
       language={language}
-      disabled={disabled}
       help={help}
     />
   );
@@ -163,24 +162,22 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
         {numericInput('radius', text.radius)}
         {numericInput('centerX', text.centerX)}
         {numericInput('centerY', text.centerY)}
-        {numericInput('startAngleDeg', text.startAngle, isIndividualAngles, isIndividualAngles ? text.notUsedInIndividualAngles : undefined)}
-        {numericInput(
-          'startAngleOffsetDeg',
-          text.startAngleOffset,
-          isIndividualAngles,
-          isIndividualAngles ? text.notUsedInIndividualAngles : text.startAngleOffsetHelp,
-        )}
-        <label>
-          {text.direction}
-          <select
-            disabled={isIndividualAngles}
-            value={settings.direction}
-            onChange={(event) => update('direction', event.target.value as Direction)}
-          >
-            <option value="counterclockwise">{text.directionOptions.counterclockwise}</option>
-            <option value="clockwise">{text.directionOptions.clockwise}</option>
-          </select>
-        </label>
+        {!isIndividualAngles ? (
+          <>
+            {numericInput('startAngleDeg', text.startAngle)}
+            {numericInput('startAngleOffsetDeg', text.startAngleOffset, text.startAngleOffsetHelp)}
+            <label>
+              {text.direction}
+              <select
+                value={settings.direction}
+                onChange={(event) => update('direction', event.target.value as Direction)}
+              >
+                <option value="counterclockwise">{text.directionOptions.counterclockwise}</option>
+                <option value="clockwise">{text.directionOptions.clockwise}</option>
+              </select>
+            </label>
+          </>
+        ) : null}
         <label>
           {text.coordinateSystem}
           <select
@@ -216,46 +213,40 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
             <option value="individualAngles">{text.angleModeOptions.individualAngles}</option>
           </select>
         </label>
-        {numericInput(
-          'stepAngleDeg',
-          text.stepAngle,
-          settings.angleMode !== 'customStep',
-          isIndividualAngles ? text.notUsedInIndividualAngles : undefined,
-        )}
-        {numericInput(
-          'endAngleDeg',
-          text.arcEndAngle,
-          settings.angleMode !== 'arc',
-          isIndividualAngles ? text.notUsedInIndividualAngles : text.arcEndHelp,
-        )}
-        <label className="field-wide individual-angles-field">
-          <span className="field-label">{text.individualAngles}</span>
-          <textarea
-            rows={3}
-            spellCheck={false}
-            disabled={!isIndividualAngles}
-            value={settings.individualAnglesText}
-            aria-invalid={individualAnglesInvalid ? 'true' : undefined}
-            onChange={(event) => update('individualAnglesText', event.target.value)}
-          />
-          <span className="field-meta" aria-live="polite">
-            <span className="field-help">{text.individualAnglesHelp}</span>
-            {individualAnglesInvalid ? (
-              <span className="field-error">
-                {translateValidationText(individualAngles.errors[0].message, language)}
-              </span>
-            ) : null}
-          </span>
-        </label>
-        <label className="inline-control">
-          <input
-            type="checkbox"
-            disabled={settings.angleMode !== 'arc'}
-            checked={settings.includeEndpoint}
-            onChange={(event) => update('includeEndpoint', event.target.checked)}
-          />
-          {text.includeArcEndpoint}
-        </label>
+        {settings.angleMode === 'customStep' ? numericInput('stepAngleDeg', text.stepAngle) : null}
+        {settings.angleMode === 'arc' ? (
+          <>
+            {numericInput('endAngleDeg', text.arcEndAngle, text.arcEndHelp)}
+            <label className="inline-control">
+              <input
+                type="checkbox"
+                checked={settings.includeEndpoint}
+                onChange={(event) => update('includeEndpoint', event.target.checked)}
+              />
+              {text.includeArcEndpoint}
+            </label>
+          </>
+        ) : null}
+        {isIndividualAngles ? (
+          <label className="field-wide individual-angles-field">
+            <span className="field-label">{text.individualAngles}</span>
+            <textarea
+              rows={3}
+              spellCheck={false}
+              value={settings.individualAnglesText}
+              aria-invalid={individualAnglesInvalid ? 'true' : undefined}
+              onChange={(event) => update('individualAnglesText', event.target.value)}
+            />
+            <span className="field-meta" aria-live="polite">
+              <span className="field-help">{text.individualAnglesHelp}</span>
+              {individualAnglesInvalid ? (
+                <span className="field-error">
+                  {translateValidationText(individualAngles.errors[0].message, language)}
+                </span>
+              ) : null}
+            </span>
+          </label>
+        ) : null}
       </fieldset>
 
       <fieldset>
@@ -288,14 +279,18 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
             <option value="customFormulaSimple">{text.rotationOptions.customFormulaSimple}</option>
           </select>
         </label>
-        {numericInput('rotation.fixedRotationDeg', text.fixedRotation, settings.rotation.mode !== 'fixed')}
-        {numericInput(
-          'rotation.rotationOffsetDeg',
-          text.offset,
-          settings.rotation.mode === 'fixed' || settings.rotation.mode === 'customFormulaSimple',
-        )}
-        {numericInput('rotation.formulaA', text.formulaA, settings.rotation.mode !== 'customFormulaSimple')}
-        {numericInput('rotation.formulaB', text.formulaB, settings.rotation.mode !== 'customFormulaSimple')}
+        {settings.rotation.mode === 'fixed'
+          ? numericInput('rotation.fixedRotationDeg', text.fixedRotation)
+          : null}
+        {rotationUsesOffset
+          ? numericInput('rotation.rotationOffsetDeg', text.rotationOffset)
+          : null}
+        {rotationUsesCustomFormula ? (
+          <>
+            {numericInput('rotation.formulaA', text.formulaA)}
+            {numericInput('rotation.formulaB', text.formulaB)}
+          </>
+        ) : null}
         <label>
           {text.normalize}
           <select
@@ -327,12 +322,12 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
             <option value="significantDigits">{text.precisionModeOptions.significantDigits}</option>
           </select>
         </label>
-        {numericInput('decimalPlaces', text.decimalPlaces, settings.outputPrecisionMode !== 'decimalPlaces')}
-        {numericInput(
-          'significantDigits',
-          text.significantDigits,
-          settings.outputPrecisionMode !== 'significantDigits',
-        )}
+        {settings.outputPrecisionMode === 'decimalPlaces'
+          ? numericInput('decimalPlaces', text.decimalPlaces)
+          : null}
+        {settings.outputPrecisionMode === 'significantDigits'
+          ? numericInput('significantDigits', text.significantDigits)
+          : null}
         <label className="inline-control">
           <input
             type="checkbox"
