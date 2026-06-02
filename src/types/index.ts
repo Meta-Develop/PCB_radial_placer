@@ -35,23 +35,57 @@ export interface ExportSettings {
   includeHeaders: boolean;
 }
 
+export type OutputPrecisionMode = 'decimalPlaces' | 'significantDigits';
+
+export type NumericExpressionField =
+  | 'count'
+  | 'radius'
+  | 'centerX'
+  | 'centerY'
+  | 'startAngleDeg'
+  | 'startAngleOffsetDeg'
+  | 'endAngleDeg'
+  | 'stepAngleDeg'
+  | 'decimalPlaces'
+  | 'significantDigits'
+  | 'reference.startNumber'
+  | 'reference.padding'
+  | 'rotation.fixedRotationDeg'
+  | 'rotation.rotationOffsetDeg'
+  | 'rotation.formulaA'
+  | 'rotation.formulaB'
+  | 'componentOffset.x'
+  | 'componentOffset.y';
+
+export type NumericExpressionMap = Partial<Record<NumericExpressionField, string>>;
+
+export interface ComponentOffsetSettings {
+  x: number;
+  y: number;
+}
+
 export interface PlacementSettings {
   count: number;
   radius: number;
   centerX: number;
   centerY: number;
   startAngleDeg: number;
+  startAngleOffsetDeg: number;
   endAngleDeg: number;
   stepAngleDeg: number;
   direction: Direction;
   angleMode: AngleMode;
   includeEndpoint: boolean;
   unit: Unit;
+  outputPrecisionMode: OutputPrecisionMode;
   decimalPlaces: number;
+  significantDigits: number;
   coordinateSystem: CoordinateSystem;
   reference: ReferenceSettings;
   rotation: RotationSettings;
+  componentOffset: ComponentOffsetSettings;
   export: ExportSettings;
+  inputExpressions: NumericExpressionMap;
 }
 
 export interface Point {
@@ -67,6 +101,10 @@ export interface Placement extends Point {
   radius: number;
   centerX: number;
   centerY: number;
+  targetCenterX: number;
+  targetCenterY: number;
+  appliedOffsetX: number;
+  appliedOffsetY: number;
 }
 
 export interface DerivedGeometry {
@@ -99,5 +137,7 @@ export interface PresetRecord {
 
 export interface ExportFormatOptions {
   includeHeaders: boolean;
+  precisionMode: OutputPrecisionMode;
   decimalPlaces: number;
+  significantDigits: number;
 }

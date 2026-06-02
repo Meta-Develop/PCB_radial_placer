@@ -1,23 +1,28 @@
 import type { Placement, PlacementSettings, ValidationResult } from '../types';
 import { downloadTextFile } from '../core/download';
 import { formatPlacementsAsCsv, formatPlacementsAsJson, formatPlacementsAsTsv } from '../core/export';
-import { formatNumber } from '../core/format';
+import { formatNumber, outputFormatOptions } from '../core/format';
+import type { UiText } from '../i18n';
 
 interface OutputTableProps {
   placements: Placement[];
   settings: PlacementSettings;
   validation: ValidationResult;
+  text: UiText['outputTable'];
 }
 
 function exportOptions(settings: PlacementSettings) {
   return {
     includeHeaders: settings.export.includeHeaders,
+    precisionMode: settings.outputPrecisionMode,
     decimalPlaces: settings.decimalPlaces,
+    significantDigits: settings.significantDigits,
   };
 }
 
-export function OutputTable({ placements, settings, validation }: OutputTableProps) {
+export function OutputTable({ placements, settings, validation, text }: OutputTableProps) {
   const options = exportOptions(settings);
+  const precision = outputFormatOptions(options);
   const csv = formatPlacementsAsCsv(placements, options);
   const tsv = formatPlacementsAsTsv(placements, options);
   const json = formatPlacementsAsJson(settings, placements, options);
@@ -32,35 +37,38 @@ export function OutputTable({ placements, settings, validation }: OutputTablePro
     <section className="panel table-panel" aria-labelledby="output-heading">
       <div className="section-heading table-heading">
         <div>
-          <h2 id="output-heading">Placement Table</h2>
+          <h2 id="output-heading">{text.heading}</h2>
           <p>
-            {placements.length} rows, {settings.unit === 'unitless' ? 'unitless coordinates' : settings.unit}
+            {text.rowsSummary(
+              placements.length,
+              settings.unit === 'unitless' ? text.unitlessCoordinates : settings.unit,
+            )}
           </p>
         </div>
         <div className="button-row">
           <button type="button" onClick={copyTable} disabled={disabled}>
-            Copy TSV
+            {text.copyTsv}
           </button>
           <button
             type="button"
             onClick={() => downloadTextFile('radial-placement.csv', csv, 'text/csv;charset=utf-8')}
             disabled={disabled}
           >
-            CSV
+            {text.csv}
           </button>
           <button
             type="button"
             onClick={() => downloadTextFile('radial-placement.tsv', tsv, 'text/tab-separated-values;charset=utf-8')}
             disabled={disabled}
           >
-            TSV
+            {text.tsv}
           </button>
           <button
             type="button"
             onClick={() => downloadTextFile('radial-placement.json', json, 'application/json;charset=utf-8')}
             disabled={disabled}
           >
-            JSON
+            {text.json}
           </button>
         </div>
       </div>
@@ -69,15 +77,19 @@ export function OutputTable({ placements, settings, validation }: OutputTablePro
         <table>
           <thead>
             <tr>
-              <th>Index</th>
-              <th>Ref</th>
-              <th>Angle deg</th>
-              <th>X</th>
-              <th>Y</th>
-              <th>Rotation deg</th>
-              <th>Radius</th>
-              <th>Center X</th>
-              <th>Center Y</th>
+              <th>{text.columns.index}</th>
+              <th>{text.columns.ref}</th>
+              <th>{text.columns.angleDeg}</th>
+              <th>{text.columns.originX}</th>
+              <th>{text.columns.originY}</th>
+              <th>{text.columns.targetCenterX}</th>
+              <th>{text.columns.targetCenterY}</th>
+              <th>{text.columns.appliedOffsetX}</th>
+              <th>{text.columns.appliedOffsetY}</th>
+              <th>{text.columns.rotationDeg}</th>
+              <th>{text.columns.radius}</th>
+              <th>{text.columns.centerX}</th>
+              <th>{text.columns.centerY}</th>
             </tr>
           </thead>
           <tbody>
@@ -85,13 +97,17 @@ export function OutputTable({ placements, settings, validation }: OutputTablePro
               <tr key={`${placement.ref}-${placement.index}`}>
                 <td>{placement.index}</td>
                 <td>{placement.ref}</td>
-                <td>{formatNumber(placement.angleDeg, settings.decimalPlaces)}</td>
-                <td>{formatNumber(placement.x, settings.decimalPlaces)}</td>
-                <td>{formatNumber(placement.y, settings.decimalPlaces)}</td>
-                <td>{formatNumber(placement.rotationDeg, settings.decimalPlaces)}</td>
-                <td>{formatNumber(placement.radius, settings.decimalPlaces)}</td>
-                <td>{formatNumber(placement.centerX, settings.decimalPlaces)}</td>
-                <td>{formatNumber(placement.centerY, settings.decimalPlaces)}</td>
+                <td>{formatNumber(placement.angleDeg, precision)}</td>
+                <td>{formatNumber(placement.x, precision)}</td>
+                <td>{formatNumber(placement.y, precision)}</td>
+                <td>{formatNumber(placement.targetCenterX, precision)}</td>
+                <td>{formatNumber(placement.targetCenterY, precision)}</td>
+                <td>{formatNumber(placement.appliedOffsetX, precision)}</td>
+                <td>{formatNumber(placement.appliedOffsetY, precision)}</td>
+                <td>{formatNumber(placement.rotationDeg, precision)}</td>
+                <td>{formatNumber(placement.radius, precision)}</td>
+                <td>{formatNumber(placement.centerX, precision)}</td>
+                <td>{formatNumber(placement.centerY, precision)}</td>
               </tr>
             ))}
           </tbody>

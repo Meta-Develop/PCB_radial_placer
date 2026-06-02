@@ -1,5 +1,5 @@
 import type { Placement, PlacementSettings } from '../types';
-import { calculateStepAngle, polarToCartesian } from './geometry';
+import { calculateStepAngle, effectiveStartAngleDeg, polarToCartesian, rotateLocalOffset } from './geometry';
 import { calculateRotation } from './rotation';
 
 export function generateReference(index: number, settings: PlacementSettings['reference']): string {
@@ -17,26 +17,38 @@ export function calculatePlacements(settings: PlacementSettings): Placement[] {
     return [];
   }
 
+  const firstAngleDeg = effectiveStartAngleDeg(settings);
+
   return Array.from({ length: count }, (_, index) => {
-    const angleDeg = settings.startAngleDeg + index * stepAngleDeg;
-    const point = polarToCartesian(
+    const angleDeg = firstAngleDeg + index * stepAngleDeg;
+    const targetCenter = polarToCartesian(
       settings.radius,
       angleDeg,
       settings.centerX,
       settings.centerY,
       settings.coordinateSystem,
     );
+    const rotationDeg = calculateRotation(angleDeg, settings.rotation);
+    const appliedOffset = rotateLocalOffset(
+      settings.componentOffset.x,
+      settings.componentOffset.y,
+      rotationDeg,
+    );
 
     return {
       ref: generateReference(index, settings.reference),
       index,
       angleDeg,
-      x: point.x,
-      y: point.y,
-      rotationDeg: calculateRotation(angleDeg, settings.rotation),
+      x: targetCenter.x - appliedOffset.x,
+      y: targetCenter.y - appliedOffset.y,
+      rotationDeg,
       radius: settings.radius,
       centerX: settings.centerX,
       centerY: settings.centerY,
+      targetCenterX: targetCenter.x,
+      targetCenterY: targetCenter.y,
+      appliedOffsetX: appliedOffset.x,
+      appliedOffsetY: appliedOffset.y,
     };
   });
 }

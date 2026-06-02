@@ -1,44 +1,43 @@
 # PCB Radial Placer
 
 PCB Radial Placer is a static TypeScript web app for calculating component
-coordinates in circular and radial PCB layouts. It is meant for ECAD planning
-workflows such as LED rings, switch rings, rotary controls, sensor arrays, and
-other repeated radial placements.
+coordinates in circular, arc, and radial PCB layouts.
+
+Live app: <https://meta-develop.github.io/PCB_radial_placer/>
 
 ![Example radial preview](public/example-preview.svg)
 
-The MVP exports coordinate tables. It does not edit KiCad board files or any
-other native ECAD design file.
+## Key Behavior
 
-## Features
+- Calculates radial placement tables for repeated PCB components such as LED
+  rings, switch rings, rotary controls, and sensor arrays.
+- Keeps ECAD coordinate assumptions explicit: units, center offset, axis
+  direction, angle direction, rotation convention, and footprint-origin offset.
+- Supports full-circle, custom-step, and arc placement modes.
+- In Arc mode, `Arc end angle` is the arc target endpoint. `Start angle offset`
+  is applied first, so the effective first angle is:
 
-- Count, radius, center, start angle, direction, angle mode, unit, precision,
-  and coordinate-system inputs.
-- Full-circle, custom-step, and arc placement modes.
-- Reference designator generation with prefix, start number, and padding.
-- Fixed, radial inward/outward, tangent, and simple formula rotation modes.
-- Live SVG preview with axes, labels, board-outline radius, and SVG export.
-- Placement table with CSV, TSV, and JSON export plus clipboard copy.
-- Local `localStorage` presets, recent settings, JSON preset import/export, and
-  reset to defaults.
-- Pure TypeScript calculation core with Vitest unit tests.
+```text
+effectiveStartAngle = startAngleDeg + startAngleOffsetDeg
+theta = effectiveStartAngle + index * stepAngle
+```
+
+- Direction controls the step sign. Counterclockwise uses positive angular
+  steps; clockwise uses negative angular steps.
+- Output formatting can use fixed decimal places or significant digits.
+- The app exports coordinate data only. It does not edit native ECAD board
+  files.
 
 ## Coordinate Convention
 
-The app keeps ECAD assumptions explicit:
-
-- Center offset is applied as `(centerX, centerY)`.
 - `0 deg` points along `+X`.
 - All angles and rotations are in degrees.
-- Counterclockwise direction uses a positive angular step.
-- Clockwise direction uses a negative angular step.
+- Center offset is applied as `(centerX, centerY)`.
 - Mathematical Y-up mode uses:
 
 ```text
 x = centerX + radius * cos(theta)
 y = centerY + radius * sin(theta)
-theta = startAngle + i * stepAngle
-stepAngle = 360 / count
 ```
 
 - Screen / ECAD Y-down mode flips the sine term:
@@ -47,152 +46,71 @@ stepAngle = 360 / count
 y = centerY - radius * sin(theta)
 ```
 
-For arc mode, the app uses the absolute span between start and end angles, then
-applies the selected direction to the step sign. If `includeEndpoint` is enabled
-and `count > 1`, the step is `span / (count - 1)`; otherwise it is
-`span / count`.
+- `rotationDeg` is an output/CAD coordinate angle. `0 deg` points along `+X`.
+  In mathematical Y-up mode, `+90 deg` points output `+Y` upward. In screen /
+  ECAD Y-down mode, `+90 deg` points output `+Y` downward.
 
-## Export Formats
+## Numeric Expressions
 
-CSV and TSV use these columns:
+Numeric fields accept deterministic arithmetic expressions:
+
+```text
+2.54/2
+10 + 1.27
+(12 - 2) / 4
+-90
+360/16/2
+```
+
+Supported syntax is addition, subtraction, multiplication, division,
+parentheses, unary signs, and finite number literals. The parser is implemented
+without `eval` or `Function`. Invalid expressions and division by zero block
+placement output instead of silently coercing to `0`.
+
+## Component Origin Offset
+
+Component local offset is:
+
+```text
+offset = desiredComponentCenter - footprintCadOrigin
+```
+
+The offset vector is entered in the component's local coordinate frame. The
+radial placement target remains the desired component center. Exported `X` and
+`Y` are the corrected footprint/CAD origin coordinates:
+
+```text
+rotatedOffset = rotateOutput(offset, rotationDeg, selectedOutputCoordinateSystem)
+exportedOrigin = targetCenter - rotatedOffset
+```
+
+With zero offset `(0, 0)`, exported `X` and `Y` match the target radial center.
+
+## Export Columns
+
+CSV and TSV exports use these columns:
 
 ```csv
-Ref,Index,AngleDeg,X,Y,RotationDeg,Radius,CenterX,CenterY
-D1,0,0.000,10.000,0.000,0.000,10.000,0.000,0.000
+Ref,Index,AngleDeg,X,Y,TargetCenterX,TargetCenterY,AppliedOffsetX,AppliedOffsetY,RotationDeg,Radius,CenterX,CenterY
+D1,0,0.000,10.000,0.000,10.000,0.000,0.000,0.000,0.000,10.000,0.000,0.000
 ```
 
-JSON includes settings, export metadata, and placements:
+`X` and `Y` are footprint/CAD origin coordinates. `TargetCenterX` and
+`TargetCenterY` are the radial center points before component-origin
+correction. `AppliedOffsetX` and `AppliedOffsetY` expose the rotated correction
+that was subtracted from the target center.
 
-```json
-{
-  "settings": {},
-  "export": {
-    "decimalPlaces": 3,
-    "coordinateConvention": "0 degrees is +X; positive angles are counterclockwise; +Y is up."
-  },
-  "placements": [
-    {
-      "ref": "D1",
-      "index": 0,
-      "angleDeg": 0,
-      "x": 10,
-      "y": 0,
-      "rotationDeg": 0,
-      "radius": 10,
-      "centerX": 0,
-      "centerY": 0
-    }
-  ]
-}
-```
+JSON exports include the settings, precision metadata, coordinate convention,
+and rounded placement objects.
 
-Displayed and exported values are rounded to the selected decimal precision.
-Internal calculations remain unrounded.
+## PWA / Offline
 
-## Local Development
+Production builds register `public/service-worker.js` after page load. After
+the first successful online load, the app shell and same-origin build assets can
+be served offline from the browser cache. Presets stay local to the current
+browser profile through `localStorage`; there is no backend sync or analytics.
 
-Install dependencies:
+## Deployment
 
-```bash
-npm install
-```
-
-Run the app:
-
-```bash
-npm run dev
-```
-
-Run tests:
-
-```bash
-npm run test:run
-```
-
-Build the static site:
-
-```bash
-npm run build
-```
-
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-## GitHub Pages Deployment
-
-The Vite config uses `base: './'`, so the generated `dist/` directory can be
-served from a repository subpath on GitHub Pages.
-
-This repository includes `.github/workflows/pages.yml`, which builds and deploys
-the static app to GitHub Pages on pushes to `main` and from manual
-`workflow_dispatch` runs. In the repository settings, configure Pages to use
-GitHub Actions as the publishing source.
-
-The workflow runs:
-
-```bash
-npm ci
-npm run test:run
-npm run build
-```
-
-It then uploads the generated `dist/` directory as the Pages artifact and deploys
-that artifact. No backend server is required.
-
-## Offline PWA Behavior
-
-The production build registers `public/service-worker.js` after the page loads.
-Local Vite development (`npm run dev`) does not register the service worker.
-
-After the first successful online load, the service worker caches:
-
-- The app shell: root page, `index.html`, manifest, preview image, and app icon.
-- Same-origin Vite build assets under `assets/`, first by reading the built
-  `index.html` during service-worker install and later as matching files are
-  requested.
-
-When offline, navigation requests fall back to the cached app shell if it is
-available. A first-ever visit still requires network access, and browsers may
-evict offline caches under storage pressure. Presets remain local to the current
-browser profile through `localStorage`; there is no backend sync, analytics, or
-network API.
-
-## Validation Notes
-
-The calculation core has unit coverage for:
-
-- Cardinal full-circle points.
-- Center offsets.
-- Clockwise angular steps.
-- Y-down coordinate conversion.
-- Arc endpoint mode.
-- Rotation modes.
-- Export rounding without mutating internal calculations.
-- Basic validation errors and warnings.
-
-Geometry validation in this MVP is numeric. The tool warns about likely duplicate
-coordinates and very small adjacent chord lengths, but it does not inspect real
-component body sizes, locked footprints, board clearances, or board boundaries.
-
-## Limitations
-
-- No direct `.kicad_pcb` editing.
-- No import of existing board files.
-- No true footprint collision checking.
-- No multi-ring editing in the MVP UI.
-- No backend, analytics, or network calls.
-- Local presets are stored only in the current browser profile.
-
-## Roadmap
-
-- Multiple enabled rings in one exported table.
-- KiCad-oriented placement CSV fields such as value, package, side, and rotation
-  conventions.
-- PNG preview export.
-- Component bounding-box and clearance helpers.
-- Bottom-side mirroring support.
-- CSV import and point-set transforms.
-- Shareable URL query settings.
+The Vite config uses `base: './'`, so the built `dist/` directory can be served
+from a repository subpath such as GitHub Pages. No backend server is required.

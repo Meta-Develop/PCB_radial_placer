@@ -1,33 +1,39 @@
 import type { PlacementSettings } from '../types';
+import type { UiText } from '../i18n';
 
 interface HelpPanelProps {
   settings: PlacementSettings;
+  text: UiText['help'];
 }
 
-export function HelpPanel({ settings }: HelpPanelProps) {
+export function HelpPanel({ settings, text }: HelpPanelProps) {
   const coordinateText =
     settings.coordinateSystem === 'mathYUp'
-      ? 'Mathematical Y-up: y = centerY + radius * sin(theta).'
-      : 'Screen / ECAD Y-down: y = centerY - radius * sin(theta).';
+      ? text.yUp
+      : text.yDown;
 
   return (
     <section className="panel help-panel" aria-labelledby="help-heading">
       <details open>
-        <summary id="help-heading">Coordinate conventions and ECAD assumptions</summary>
+        <summary id="help-heading">{text.summary}</summary>
         <div className="help-content">
           <p>
-            Center offset is applied as <code>(centerX, centerY)</code>. Zero degrees points along +X.
-            Angles are in degrees. Direction controls the sign of the angular step.
+            {text.conventions}
           </p>
           <p>{coordinateText}</p>
           <p>
-            This MVP generates coordinates and exports data only. It does not edit <code>.kicad_pcb</code> files,
-            preserve or mutate footprints, inspect clearances, or modify locked component state.
+            {text.arc}
           </p>
           <p>
-            Formula: <code>x = centerX + radius * cos(theta)</code>,{' '}
-            <code>theta = startAngle + index * stepAngle</code>.
+            {text.expressions}
           </p>
+          <p>
+            {text.offset}
+          </p>
+          <p>
+            {text.boundary}
+          </p>
+          <p>{text.formula}</p>
         </div>
       </details>
     </section>

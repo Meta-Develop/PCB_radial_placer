@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import type { Placement, PlacementSettings } from '../types';
 import { downloadTextFile } from '../core/download';
+import { parseNumericExpression } from '../core/expression';
+import type { Language, UiText } from '../i18n';
+import { translateExpressionError } from '../i18n';
 
 interface PreviewSvgProps {
   placements: Placement[];
@@ -10,6 +14,8 @@ interface PreviewSvgProps {
   onShowLabelsChange: (value: boolean) => void;
   onShowAxesChange: (value: boolean) => void;
   onBoardOutlineRadiusChange: (value: number) => void;
+  language: Language;
+  text: UiText['preview'];
 }
 
 const SVG_SIZE = 520;
@@ -27,8 +33,16 @@ function escapeXml(value: string): string {
 function coordinateExtents(placements: Placement[], settings: PlacementSettings, boardOutlineRadius: number) {
   const radii = [settings.radius, boardOutlineRadius].filter((value) => Number.isFinite(value) && value > 0);
   const baseRadius = Math.max(1, ...radii);
-  const xs = [settings.centerX - baseRadius, settings.centerX + baseRadius, ...placements.map((item) => item.x)];
-  const ys = [settings.centerY - baseRadius, settings.centerY + baseRadius, ...placements.map((item) => item.y)];
+  const xs = [
+    settings.centerX - baseRadius,
+    settings.centerX + baseRadius,
+    ...placements.flatMap((item) => [item.x, item.targetCenterX]),
+  ];
+  const ys = [
+    settings.centerY - baseRadius,
+    settings.centerY + baseRadius,
+    ...placements.flatMap((item) => [item.y, item.targetCenterY]),
+  ];
 
   return {
     minX: Math.min(...xs),
@@ -65,24 +79,31 @@ export function buildPreviewSvg(
   const axisEndX = project(maxX, 0);
   const axisStartY = project(0, minY);
   const axisEndY = project(0, maxY);
+  const yAxisLabelX = axisEndY.x - 10;
+  const yAxisLabelY = yDown ? Math.min(SVG_SIZE - 12, axisEndY.y + 22) : Math.max(16, axisEndY.y - 14);
 
   const pointMarkup = placements
     .map((placement) => {
-      const point = project(placement.x, placement.y);
+      const origin = project(placement.x, placement.y);
+      const targetCenter = project(placement.targetCenterX, placement.targetCenterY);
       const rotationRad = (placement.rotationDeg * Math.PI) / 180;
       const rotationEnd = {
-        x: point.x + 18 * Math.cos(rotationRad),
-        y: point.y + (yDown ? 18 : -18) * Math.sin(rotationRad),
+        x: origin.x + 18 * Math.cos(rotationRad),
+        y: origin.y + (yDown ? 18 : -18) * Math.sin(rotationRad),
       };
       const label = showLabels
-        ? `<text x="${point.x + 8}" y="${point.y - 8}" class="svg-label">${escapeXml(placement.ref)}</text>`
+        ? `<text x="${targetCenter.x + 8}" y="${targetCenter.y - 8}" class="svg-label">${escapeXml(placement.ref)}</text>`
         : '';
-      return `<g><circle class="svg-point" cx="${point.x}" cy="${point.y}" r="5"/><line class="svg-rotation" x1="${point.x}" y1="${point.y}" x2="${rotationEnd.x}" y2="${rotationEnd.y}"/>${label}</g>`;
+      const offsetMarkup =
+        Math.hypot(placement.appliedOffsetX, placement.appliedOffsetY) > 1e-9
+          ? `<line class="svg-offset" x1="${origin.x}" y1="${origin.y}" x2="${targetCenter.x}" y2="${targetCenter.y}"/><rect class="svg-origin" x="${origin.x - 4}" y="${origin.y - 4}" width="8" height="8" rx="1"/>`
+          : '';
+      return `<g>${offsetMarkup}<circle class="svg-point" cx="${targetCenter.x}" cy="${targetCenter.y}" r="5"/><line class="svg-rotation" x1="${origin.x}" y1="${origin.y}" x2="${rotationEnd.x}" y2="${rotationEnd.y}"/>${label}</g>`;
     })
     .join('');
 
   const axisMarkup = showAxes
-    ? `<line class="svg-axis" x1="${axisStartX.x}" y1="${axisStartX.y}" x2="${axisEndX.x}" y2="${axisEndX.y}"/><line class="svg-axis" x1="${axisStartY.x}" y1="${axisStartY.y}" x2="${axisEndY.x}" y2="${axisEndY.y}"/><text class="svg-axis-label" x="${axisEndX.x - 18}" y="${axisEndX.y - 8}">+X</text><text class="svg-axis-label" x="${axisEndY.x + 8}" y="${axisEndY.y + (yDown ? -8 : 16)}">+Y output</text>`
+    ? `<line class="svg-axis" x1="${axisStartX.x}" y1="${axisStartX.y}" x2="${axisEndX.x}" y2="${axisEndX.y}"/><line class="svg-axis" x1="${axisStartY.x}" y1="${axisStartY.y}" x2="${axisEndY.x}" y2="${axisEndY.y}"/><text class="svg-axis-label" x="${axisEndX.x - 18}" y="${axisEndX.y - 8}">+X</text><text class="svg-axis-label" x="${yAxisLabelX}" y="${yAxisLabelY}" text-anchor="end">+Y output</text>`
     : '';
 
   const boardMarkup =
@@ -92,7 +113,7 @@ export function buildPreviewSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SVG_SIZE} ${SVG_SIZE}" role="img" aria-label="PCB radial placement preview">
   <style>
-    .svg-bg{fill:#f8fafc}.svg-board{fill:none;stroke:#64748b;stroke-width:1.5;stroke-dasharray:8 7}.svg-radius{fill:none;stroke:#0f766e;stroke-width:2}.svg-axis{stroke:#94a3b8;stroke-width:1.2}.svg-axis-label,.svg-label{font:12px system-ui,sans-serif;fill:#0f172a}.svg-point{fill:#f97316;stroke:#7c2d12;stroke-width:1.5}.svg-center{fill:#0f766e}.svg-rotation{stroke:#7c2d12;stroke-width:1.4;stroke-linecap:round}
+    .svg-bg{fill:#f8fafc}.svg-board{fill:none;stroke:#64748b;stroke-width:1.5;stroke-dasharray:8 7}.svg-radius{fill:none;stroke:#0f766e;stroke-width:2}.svg-axis{stroke:#94a3b8;stroke-width:1.2}.svg-axis-label,.svg-label{font:12px system-ui,sans-serif;fill:#0f172a}.svg-point{fill:#f97316;stroke:#7c2d12;stroke-width:1.5}.svg-origin{fill:#14b8a6;stroke:#115e59;stroke-width:1}.svg-center{fill:#0f766e}.svg-offset{stroke:#0f766e;stroke-width:1.2;stroke-dasharray:4 4}.svg-rotation{stroke:#7c2d12;stroke-width:1.4;stroke-linecap:round}
   </style>
   <rect class="svg-bg" width="${SVG_SIZE}" height="${SVG_SIZE}" rx="0"/>
   ${axisMarkup}
@@ -112,18 +133,33 @@ export function PreviewSvg({
   onShowLabelsChange,
   onShowAxesChange,
   onBoardOutlineRadiusChange,
+  language,
+  text,
 }: PreviewSvgProps) {
   const svgMarkup = buildPreviewSvg(placements, settings, showLabels, showAxes, boardOutlineRadius);
+  const [boardRadiusText, setBoardRadiusText] = useState(String(boardOutlineRadius));
+  const parsedBoardRadius = parseNumericExpression(boardRadiusText);
+  const boardRadiusError =
+    parsedBoardRadius.ok && parsedBoardRadius.value < 0 ? text.boardRadiusError : null;
+  const boardRadiusInvalid = !parsedBoardRadius.ok || boardRadiusError !== null;
+
+  const updateBoardRadius = (value: string) => {
+    setBoardRadiusText(value);
+    const parsed = parseNumericExpression(value);
+    if (parsed.ok && parsed.value >= 0) {
+      onBoardOutlineRadiusChange(parsed.value);
+    }
+  };
 
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
       <div className="section-heading preview-heading">
         <div>
-          <h2 id="preview-heading">SVG Preview</h2>
+          <h2 id="preview-heading">{text.heading}</h2>
           <p>
             {settings.coordinateSystem === 'mathYUp'
-              ? '+Y is drawn upward to match mathematical output coordinates.'
-              : '+Y is drawn downward to match screen / ECAD output coordinates.'}
+              ? text.yUp
+              : text.yDown}
           </p>
         </div>
         <div className="button-row">
@@ -132,28 +168,38 @@ export function PreviewSvg({
             onClick={() => downloadTextFile('radial-placement-preview.svg', svgMarkup, 'image/svg+xml;charset=utf-8')}
             disabled={placements.length === 0}
           >
-            SVG
+            {text.exportSvg}
           </button>
         </div>
       </div>
       <div className="preview-controls">
         <label className="inline-control">
           <input type="checkbox" checked={showLabels} onChange={(event) => onShowLabelsChange(event.target.checked)} />
-          Labels
+          {text.labels}
         </label>
         <label className="inline-control">
           <input type="checkbox" checked={showAxes} onChange={(event) => onShowAxesChange(event.target.checked)} />
-          Axes
+          {text.axes}
         </label>
         <label>
-          Board outline radius
+          {text.boardOutlineRadius}
           <input
-            type="number"
-            min={0}
-            step="any"
-            value={Number.isFinite(boardOutlineRadius) ? boardOutlineRadius : ''}
-            onChange={(event) => onBoardOutlineRadiusChange(event.target.value === '' ? 0 : Number(event.target.value))}
+            type="text"
+            inputMode="decimal"
+            spellCheck={false}
+            value={boardRadiusText}
+            aria-invalid={boardRadiusInvalid ? 'true' : undefined}
+            onChange={(event) => updateBoardRadius(event.target.value)}
           />
+          {parsedBoardRadius.ok && parsedBoardRadius.isExpression ? (
+            <span className="field-evaluation">= {parsedBoardRadius.value}</span>
+          ) : null}
+          {boardRadiusInvalid ? (
+            <span className="field-error">
+              {boardRadiusError ??
+                (!parsedBoardRadius.ok ? translateExpressionError(parsedBoardRadius.error, language) : '')}
+            </span>
+          ) : null}
         </label>
       </div>
       <div className="svg-frame" dangerouslySetInnerHTML={{ __html: svgMarkup }} />
