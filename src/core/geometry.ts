@@ -81,10 +81,11 @@ export function rotateLocalOffset(
   offsetX: number,
   offsetY: number,
   rotationDeg: number,
+  coordinateSystem: CoordinateSystem,
 ): Point {
   const rotationRad = degreesToRadians(rotationDeg);
   const cos = Math.cos(rotationRad);
-  const sin = Math.sin(rotationRad);
+  const sin = ySign(coordinateSystem) * Math.sin(rotationRad);
 
   return {
     x: offsetX * cos - offsetY * sin,

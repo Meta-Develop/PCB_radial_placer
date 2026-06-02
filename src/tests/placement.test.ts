@@ -204,8 +204,29 @@ describe('calculatePlacements', () => {
     closeTo(placements[0].targetCenterX, 10);
     closeTo(placements[0].targetCenterY, 0);
     closeTo(placements[0].appliedOffsetX, 0);
-    closeTo(placements[0].appliedOffsetY, 2);
+    closeTo(placements[0].appliedOffsetY, -2);
     closeTo(placements[0].x, 10);
-    closeTo(placements[0].y, -2);
+    closeTo(placements[0].y, 2);
+  });
+
+  it('rotates a radial-outward local X offset along the Y-down radial direction', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 1,
+        radius: 10,
+        startAngleDeg: 90,
+        coordinateSystem: 'ecadYDown',
+        rotation: { ...DEFAULT_SETTINGS.rotation, mode: 'radialOutward', normalize: 'none' },
+        componentOffset: { x: 2, y: 0 },
+      }),
+    );
+
+    closeTo(placements[0].targetCenterX, 0);
+    closeTo(placements[0].targetCenterY, -10);
+    closeTo(placements[0].rotationDeg, 90);
+    closeTo(placements[0].appliedOffsetX, 0);
+    closeTo(placements[0].appliedOffsetY, -2);
+    closeTo(placements[0].x, 0);
+    closeTo(placements[0].y, -8);
   });
 });
