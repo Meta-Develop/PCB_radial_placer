@@ -6,7 +6,7 @@ const en = {
   languageLabel: 'Language',
   languageNames: {
     en: 'English',
-    ja: 'Japanese',
+    ja: '日本語',
   },
   header: {
     subtitle: 'Static coordinate calculator for radial ECAD placement tables.',
@@ -194,7 +194,7 @@ export type UiText = typeof en;
 const ja: UiText = {
   languageLabel: '言語',
   languageNames: {
-    en: '英語',
+    en: 'English',
     ja: '日本語',
   },
   header: {
