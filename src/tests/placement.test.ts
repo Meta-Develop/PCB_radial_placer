@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../core/defaults';
 import { calculatePlacements } from '../core/placement';
+import { validateSettings } from '../core/validation';
 import type { PlacementSettings } from '../types';
 
 function settings(overrides: Partial<PlacementSettings>): PlacementSettings {
@@ -46,6 +47,25 @@ describe('calculatePlacements', () => {
     const placements = calculatePlacements(settings({ count: 4, radius: 10, direction: 'clockwise' }));
 
     expect(placements.map((placement) => placement.angleDeg)).toEqual([0, -90, -180, -270]);
+  });
+
+  it('uses Direction as the sign source for custom step angles', () => {
+    const clockwise = settings({
+      count: 3,
+      angleMode: 'customStep',
+      stepAngleDeg: 45,
+      direction: 'clockwise',
+    });
+    const negativeStep = settings({
+      count: 3,
+      angleMode: 'customStep',
+      stepAngleDeg: -45,
+      direction: 'clockwise',
+    });
+
+    expect(calculatePlacements(clockwise).map((placement) => placement.angleDeg)).toEqual([0, -45, -90]);
+    expect(validateSettings(negativeStep).valid).toBe(false);
+    expect(calculatePlacements(negativeStep).map((placement) => placement.angleDeg)).toEqual([0, -45, -90]);
   });
 
   it('flips sine sign in Y-down coordinate mode', () => {

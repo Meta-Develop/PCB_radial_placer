@@ -1,7 +1,44 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../core/defaults';
-import { parsePresetImport } from '../core/presets';
+import {
+  loadPresetRecords,
+  loadRecentSettings,
+  parsePresetImport,
+  PRESETS_STORAGE_KEY,
+  savePresetRecord,
+  storeRecentSettings,
+} from '../core/presets';
 import { normalizePlacementSettings } from '../core/settings';
+
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+
+function restoreLocalStorage() {
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(window, 'localStorage', originalLocalStorageDescriptor);
+    window.localStorage.clear();
+  }
+}
+
+function replaceLocalStorage(storage: Partial<Storage>) {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: storage,
+  });
+}
+
+function blockLocalStorageAccess() {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    get() {
+      throw new Error('localStorage unavailable');
+    },
+  });
+}
+
+afterEach(() => {
+  restoreLocalStorage();
+  vi.restoreAllMocks();
+});
 
 describe('preset/settings normalization', () => {
   it('merges partial imported settings with defaults', () => {
@@ -121,5 +158,59 @@ describe('preset/settings normalization', () => {
 
   it('throws for syntactically invalid JSON import', () => {
     expect(() => parsePresetImport('{bad json')).toThrow();
+  });
+});
+
+describe('preset localStorage robustness', () => {
+  it('falls back when localStorage property access throws', () => {
+    blockLocalStorageAccess();
+
+    expect(loadPresetRecords()).toEqual([]);
+    expect(loadRecentSettings()).toBeNull();
+    expect(storeRecentSettings(DEFAULT_SETTINGS)).toBe(false);
+  });
+
+  it('falls back when localStorage getItem throws', () => {
+    replaceLocalStorage({
+      getItem: vi.fn(() => {
+        throw new Error('blocked getItem');
+      }),
+      setItem: vi.fn(),
+    });
+
+    expect(loadPresetRecords()).toEqual([]);
+    expect(loadRecentSettings()).toBeNull();
+  });
+
+  it('does not report preset save success when localStorage setItem throws', () => {
+    const existingPreset = {
+      id: 'existing',
+      name: 'Existing',
+      settings: DEFAULT_SETTINGS,
+      savedAt: new Date(0).toISOString(),
+    };
+    replaceLocalStorage({
+      getItem: vi.fn((key: string) => (key === PRESETS_STORAGE_KEY ? JSON.stringify([existingPreset]) : null)),
+      setItem: vi.fn(() => {
+        throw new Error('quota exceeded');
+      }),
+    });
+
+    const result = savePresetRecord('Blocked Save', DEFAULT_SETTINGS);
+
+    expect(result.saved).toBe(false);
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0].name).toBe('Existing');
+  });
+
+  it('returns false instead of throwing when recent settings cannot be stored', () => {
+    replaceLocalStorage({
+      getItem: vi.fn(),
+      setItem: vi.fn(() => {
+        throw new Error('quota exceeded');
+      }),
+    });
+
+    expect(storeRecentSettings(DEFAULT_SETTINGS)).toBe(false);
   });
 });

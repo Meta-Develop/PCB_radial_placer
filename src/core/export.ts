@@ -20,7 +20,7 @@ const HEADERS = [
 function escapeDelimitedCell(value: string | number, delimiter: ',' | '\t'): string {
   const text = String(value);
   if (delimiter === '\t') {
-    return text.replace(/\t/g, ' ');
+    return text.replace(/[\t\r\n]/g, ' ');
   }
   if (/[",\n\r]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;

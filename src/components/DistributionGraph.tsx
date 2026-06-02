@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { Placement, PlacementSettings } from '../types';
 import { formatNumber, outputFormatOptions } from '../core/format';
 import type { UiText } from '../i18n';
@@ -44,10 +45,19 @@ function polyline(values: number[], min: number, max: number): string {
     .join(' ');
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function emptySvg(text: UiText['graph']): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}" role="img" aria-label="${text.aria}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}" role="img" aria-label="${escapeXml(text.aria)}">
   <rect class="graph-bg" width="${GRAPH_WIDTH}" height="${GRAPH_HEIGHT}"/>
-  <text class="graph-muted" x="${GRAPH_WIDTH / 2}" y="${GRAPH_HEIGHT / 2}" text-anchor="middle">${text.empty}</text>
+  <text class="graph-muted" x="${GRAPH_WIDTH / 2}" y="${GRAPH_HEIGHT / 2}" text-anchor="middle">${escapeXml(text.empty)}</text>
 </svg>`;
 }
 
@@ -76,7 +86,8 @@ export function buildDistributionGraphSvg(
   const angleDots = placements
     .map((placement) => {
       const x = scaleValue(placement.angleDeg, minAngle, maxAngle, LEFT, GRAPH_WIDTH - RIGHT);
-      return `<circle class="graph-angle-dot" cx="${x.toFixed(2)}" cy="${ANGLE_Y}" r="4"><title>${placement.ref}: ${formatNumber(placement.angleDeg, precision)} deg</title></circle>`;
+      const title = `${placement.ref}: ${formatNumber(placement.angleDeg, precision)} deg`;
+      return `<circle class="graph-angle-dot" cx="${x.toFixed(2)}" cy="${ANGLE_Y}" r="4"><title>${escapeXml(title)}</title></circle>`;
     })
     .join('');
   const angleConnectors = placements
@@ -97,7 +108,7 @@ export function buildDistributionGraphSvg(
       const x = LEFT + index * slotWidth + (slotWidth - barWidth) / 2;
       const height = scaleValue(step, 0, maxStep, 0, STEP_BOTTOM - STEP_TOP);
       const y = STEP_BOTTOM - height;
-      return `<rect class="graph-step-bar" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${height.toFixed(2)}"><title>${text.stepTitle(index, index + 1, formatNumber(step, precision))}</title></rect>`;
+      return `<rect class="graph-step-bar" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${height.toFixed(2)}"><title>${escapeXml(text.stepTitle(index, index + 1, formatNumber(step, precision)))}</title></rect>`;
     })
     .join('');
 
@@ -105,18 +116,18 @@ export function buildDistributionGraphSvg(
   const yLine = polyline(originYs, minProfile, maxProfile);
   const last = placements[placements.length - 1];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}" role="img" aria-label="${text.aria}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}" role="img" aria-label="${escapeXml(text.aria)}">
   <style>
     .graph-bg{fill:#f8fafc}.graph-axis{stroke:#cbd5e1;stroke-width:1}.graph-grid{stroke:#e2e8f0;stroke-width:1}.graph-label{font:12px system-ui,sans-serif;fill:#344256}.graph-muted{font:13px system-ui,sans-serif;fill:#657386}.graph-angle-gap{stroke:#94a3b8;stroke-width:2;stroke-linecap:round}.graph-angle-dot{fill:#f97316;stroke:#7c2d12;stroke-width:1.2}.graph-x{fill:none;stroke:#0f766e;stroke-width:2.4}.graph-y{fill:none;stroke:#7c3aed;stroke-width:2.4}.graph-step-bar{fill:#14b8a6;opacity:.72}
   </style>
   <rect class="graph-bg" width="${GRAPH_WIDTH}" height="${GRAPH_HEIGHT}"/>
-  <text class="graph-label" x="${LEFT}" y="${TOP}">${text.angleTitle}</text>
+  <text class="graph-label" x="${LEFT}" y="${TOP}">${escapeXml(text.angleTitle)}</text>
   <line class="graph-axis" x1="${LEFT}" y1="${ANGLE_Y}" x2="${GRAPH_WIDTH - RIGHT}" y2="${ANGLE_Y}"/>
   ${angleConnectors}
   ${angleDots}
   <text class="graph-muted" x="${LEFT}" y="${ANGLE_Y + 24}">${formatNumber(minAngle, precision)} deg</text>
   <text class="graph-muted" x="${GRAPH_WIDTH - RIGHT}" y="${ANGLE_Y + 24}" text-anchor="end">${formatNumber(maxAngle, precision)} deg</text>
-  <text class="graph-label" x="${LEFT}" y="${PROFILE_TOP - 14}">${text.profileTitle}</text>
+  <text class="graph-label" x="${LEFT}" y="${PROFILE_TOP - 14}">${escapeXml(text.profileTitle)}</text>
   <line class="graph-grid" x1="${LEFT}" y1="${PROFILE_TOP}" x2="${GRAPH_WIDTH - RIGHT}" y2="${PROFILE_TOP}"/>
   <line class="graph-grid" x1="${LEFT}" y1="${(PROFILE_TOP + PROFILE_BOTTOM) / 2}" x2="${GRAPH_WIDTH - RIGHT}" y2="${(PROFILE_TOP + PROFILE_BOTTOM) / 2}"/>
   <line class="graph-grid" x1="${LEFT}" y1="${PROFILE_BOTTOM}" x2="${GRAPH_WIDTH - RIGHT}" y2="${PROFILE_BOTTOM}"/>
@@ -125,13 +136,13 @@ export function buildDistributionGraphSvg(
   <text class="graph-muted" x="${LEFT}" y="${PROFILE_BOTTOM + 16}">0</text>
   <text class="graph-muted" x="${GRAPH_WIDTH - RIGHT}" y="${PROFILE_BOTTOM + 16}" text-anchor="end">${last.index}</text>
   <text class="graph-label" x="${GRAPH_WIDTH - RIGHT - 74}" y="${PROFILE_TOP - 14}"><tspan fill="#0f766e">X</tspan> / <tspan fill="#7c3aed">Y</tspan></text>
-  <text class="graph-label" x="${LEFT}" y="${STEP_TOP - 8}">${text.adjacentStep}</text>
+  <text class="graph-label" x="${LEFT}" y="${STEP_TOP - 8}">${escapeXml(text.adjacentStep)}</text>
   ${stepBars}
 </svg>`;
 }
 
 export function DistributionGraph({ placements, settings, text }: DistributionGraphProps) {
-  const svgMarkup = buildDistributionGraphSvg(placements, settings, text);
+  const svgMarkup = useMemo(() => buildDistributionGraphSvg(placements, settings, text), [placements, settings, text]);
 
   return (
     <section className="panel graph-panel" aria-labelledby="graph-heading">

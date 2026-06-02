@@ -1,6 +1,7 @@
 import type { Placement, PlacementSettings } from '../types';
 import { calculateStepAngle, effectiveStartAngleDeg, polarToCartesian, rotateLocalOffset } from './geometry';
 import { parseIndividualAngles } from './individualAngles';
+import { MAX_COMPONENT_COUNT } from './limits';
 import { calculateRotation } from './rotation';
 
 export function generateReference(index: number, settings: PlacementSettings['reference']): string {
@@ -14,7 +15,7 @@ export function calculatePlacements(settings: PlacementSettings): Placement[] {
   const count = Number.isInteger(settings.count) ? settings.count : 0;
   const stepAngleDeg = calculateStepAngle(settings);
 
-  if (count <= 0 || !Number.isFinite(stepAngleDeg)) {
+  if (count <= 0 || count > MAX_COMPONENT_COUNT || !Number.isFinite(stepAngleDeg)) {
     return [];
   }
 

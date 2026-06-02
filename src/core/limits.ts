@@ -1,0 +1,1 @@
+export const MAX_COMPONENT_COUNT = 2000;

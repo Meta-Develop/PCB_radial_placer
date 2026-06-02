@@ -8,24 +8,49 @@ export interface NumberFormatOptions {
 
 export type NumberFormatInput = number | NumberFormatOptions;
 
+const MIN_DECIMAL_PLACES = 0;
+const MAX_DECIMAL_PLACES = 9;
+const MIN_SIGNIFICANT_DIGITS = 1;
+const MAX_SIGNIFICANT_DIGITS = 12;
+
+function clampInteger(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function sanitizeDecimalPlaces(decimalPlaces: number): number {
+  return clampInteger(decimalPlaces, MIN_DECIMAL_PLACES, MAX_DECIMAL_PLACES);
+}
+
+function sanitizeSignificantDigits(significantDigits: number): number {
+  return clampInteger(significantDigits, MIN_SIGNIFICANT_DIGITS, MAX_SIGNIFICANT_DIGITS);
+}
+
 function normalizeFormatOptions(input: NumberFormatInput): NumberFormatOptions {
   if (typeof input === 'number') {
     return {
       precisionMode: 'decimalPlaces',
-      decimalPlaces: input,
+      decimalPlaces: sanitizeDecimalPlaces(input),
       significantDigits: 4,
     };
   }
 
-  return input;
+  return {
+    ...input,
+    decimalPlaces: sanitizeDecimalPlaces(input.decimalPlaces),
+    significantDigits: sanitizeSignificantDigits(input.significantDigits),
+  };
 }
 
 export function roundToDecimalPlaces(value: number, decimalPlaces: number): number {
   if (!Number.isFinite(value)) {
     return value;
   }
-  const factor = 10 ** decimalPlaces;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+  const factor = 10 ** sanitizeDecimalPlaces(decimalPlaces);
+  return Math.round((value + Math.sign(value) * Number.EPSILON) * factor) / factor;
 }
 
 export function roundToSignificantDigits(value: number, significantDigits: number): number {
@@ -33,8 +58,9 @@ export function roundToSignificantDigits(value: number, significantDigits: numbe
     return value;
   }
 
+  const sanitizedSignificantDigits = sanitizeSignificantDigits(significantDigits);
   const exponent = Math.floor(Math.log10(Math.abs(value)));
-  const factor = 10 ** (significantDigits - 1 - exponent);
+  const factor = 10 ** (sanitizedSignificantDigits - 1 - exponent);
   return Math.round((value + Math.sign(value) * Number.EPSILON) * factor) / factor;
 }
 
@@ -75,7 +101,7 @@ export function formatSignificantDigits(value: number, significantDigits: number
     return '0';
   }
 
-  return expandExponentialNotation(value.toPrecision(significantDigits));
+  return expandExponentialNotation(value.toPrecision(sanitizeSignificantDigits(significantDigits)));
 }
 
 export function formatNumber(value: number, precision: NumberFormatInput): string {

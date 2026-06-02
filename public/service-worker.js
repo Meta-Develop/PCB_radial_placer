@@ -13,9 +13,7 @@ const APP_SHELL_URLS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(APP_CACHE)
-      .then((cache) => cache.addAll(APP_SHELL_URLS))
+    cacheAppShell()
       .then(() => cacheCurrentBuildAssets())
       .then(() => self.skipWaiting()),
   );
@@ -93,6 +91,23 @@ function isCacheable(response) {
   return response && response.status === 200 && (response.type === 'basic' || response.type === 'default');
 }
 
+async function cacheAppShell() {
+  try {
+    const cache = await caches.open(APP_CACHE);
+    await Promise.allSettled(APP_SHELL_URLS.map((url) => cache.add(url)));
+  } catch {
+    // The service worker can still pass through online responses if app shell caching is unavailable.
+  }
+}
+
+async function putCacheEntry(cache, request, response) {
+  try {
+    await cache.put(request, response);
+  } catch {
+    // Cache quota and private-browsing failures should not block a valid network response.
+  }
+}
+
 async function cacheCurrentBuildAssets() {
   try {
     const indexResponse = await fetch('./index.html', { cache: 'reload' });
@@ -117,7 +132,7 @@ async function networkFirstNavigation(request) {
     const response = await fetch(request);
     if (isCacheable(response)) {
       const cache = await caches.open(APP_CACHE);
-      await cache.put('./index.html', response.clone());
+      await putCacheEntry(cache, './index.html', response.clone());
     }
     return response;
   } catch {
@@ -149,7 +164,7 @@ async function cacheFirst(request) {
   const networkResponse = await fetch(request);
   if (isCacheable(networkResponse)) {
     const cache = await caches.open(ASSET_CACHE);
-    await cache.put(request, networkResponse.clone());
+    await putCacheEntry(cache, request, networkResponse.clone());
   }
   return networkResponse;
 }
@@ -161,7 +176,7 @@ async function staleWhileRevalidate(request, cacheName) {
   const networkResponsePromise = fetch(request)
     .then((networkResponse) => {
       if (isCacheable(networkResponse)) {
-        cache.put(request, networkResponse.clone());
+        void putCacheEntry(cache, request, networkResponse.clone());
       }
       return networkResponse;
     })

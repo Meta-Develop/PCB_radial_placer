@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import type { Placement, PlacementSettings, ValidationResult } from '../types';
 import { downloadTextFile } from '../core/download';
 import { formatPlacementsAsCsv, formatPlacementsAsJson, formatPlacementsAsTsv } from '../core/export';
@@ -21,14 +22,31 @@ function exportOptions(settings: PlacementSettings) {
 }
 
 export function OutputTable({ placements, settings, validation, text }: OutputTableProps) {
-  const options = exportOptions(settings);
+  const [copyStatus, setCopyStatus] = useState('');
+  const options = useMemo(
+    () => exportOptions(settings),
+    [
+      settings.decimalPlaces,
+      settings.export.includeHeaders,
+      settings.outputPrecisionMode,
+      settings.significantDigits,
+    ],
+  );
   const precision = outputFormatOptions(options);
-  const csv = formatPlacementsAsCsv(placements, options);
-  const tsv = formatPlacementsAsTsv(placements, options);
-  const json = formatPlacementsAsJson(settings, placements, options);
 
   const copyTable = async () => {
-    await navigator.clipboard.writeText(tsv);
+    const clipboard = navigator.clipboard;
+    if (!clipboard?.writeText) {
+      setCopyStatus(text.copyFailed);
+      return;
+    }
+
+    try {
+      await clipboard.writeText(formatPlacementsAsTsv(placements, options));
+      setCopyStatus(text.copySucceeded);
+    } catch {
+      setCopyStatus(text.copyFailed);
+    }
   };
 
   const disabled = !validation.valid || placements.length === 0;
@@ -51,27 +69,50 @@ export function OutputTable({ placements, settings, validation, text }: OutputTa
           </button>
           <button
             type="button"
-            onClick={() => downloadTextFile('radial-placement.csv', csv, 'text/csv;charset=utf-8')}
+            onClick={() =>
+              downloadTextFile(
+                'radial-placement.csv',
+                formatPlacementsAsCsv(placements, options),
+                'text/csv;charset=utf-8',
+              )
+            }
             disabled={disabled}
           >
             {text.csv}
           </button>
           <button
             type="button"
-            onClick={() => downloadTextFile('radial-placement.tsv', tsv, 'text/tab-separated-values;charset=utf-8')}
+            onClick={() =>
+              downloadTextFile(
+                'radial-placement.tsv',
+                formatPlacementsAsTsv(placements, options),
+                'text/tab-separated-values;charset=utf-8',
+              )
+            }
             disabled={disabled}
           >
             {text.tsv}
           </button>
           <button
             type="button"
-            onClick={() => downloadTextFile('radial-placement.json', json, 'application/json;charset=utf-8')}
+            onClick={() =>
+              downloadTextFile(
+                'radial-placement.json',
+                formatPlacementsAsJson(settings, placements, options),
+                'application/json;charset=utf-8',
+              )
+            }
             disabled={disabled}
           >
             {text.json}
           </button>
         </div>
       </div>
+      {copyStatus && (
+        <p className="status-line" role="status" aria-live="polite">
+          {copyStatus}
+        </p>
+      )}
 
       <div className="table-wrap">
         <table>

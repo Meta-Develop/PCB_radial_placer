@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../core/defaults';
-import { formatPlacementsAsCsv } from '../core/export';
-import { roundToDecimalPlaces } from '../core/format';
+import { formatPlacementsAsCsv, formatPlacementsAsTsv } from '../core/export';
+import {
+  formatNumber,
+  formatSignificantDigits,
+  roundNumber,
+  roundedPlacement,
+  roundToDecimalPlaces,
+  roundToSignificantDigits,
+} from '../core/format';
 import { calculatePlacements } from '../core/placement';
 import { calculateRotation } from '../core/rotation';
 import type { ExportFormatOptions } from '../types';
@@ -52,6 +59,43 @@ describe('rotation calculations', () => {
 });
 
 describe('export formatting', () => {
+  it('rounds decimal half-boundaries symmetrically', () => {
+    expect(roundToDecimalPlaces(1.005, 2)).toBe(1.01);
+    expect(roundToDecimalPlaces(-1.005, 2)).toBe(-1.01);
+  });
+
+  it('clamps out-of-range decimal places during display and export rounding', () => {
+    const precision = {
+      precisionMode: 'decimalPlaces' as const,
+      decimalPlaces: 1000,
+      significantDigits: 1000,
+    };
+    const placement = calculatePlacements({ ...DEFAULT_SETTINGS, count: 1, radius: 1 / 3 })[0];
+
+    expect(() => formatNumber(1.2345678912, precision)).not.toThrow();
+    expect(formatNumber(1.2345678912, precision)).toBe('1.234567891');
+    expect(formatNumber(1.9, { ...precision, decimalPlaces: -1000 })).toBe('2');
+    expect(roundToDecimalPlaces(1.2345678912, 1000)).toBe(1.234567891);
+    expect(roundNumber(1.2345678912, precision)).toBe(1.234567891);
+    expect(() => roundedPlacement(placement, precision)).not.toThrow();
+    expect(roundedPlacement(placement, precision).x).toBe(0.333333333);
+  });
+
+  it('clamps out-of-range significant digits during display and export rounding', () => {
+    const precision = {
+      precisionMode: 'significantDigits' as const,
+      decimalPlaces: 1000,
+      significantDigits: 1000,
+    };
+
+    expect(() => formatNumber(1.2345678912345, precision)).not.toThrow();
+    expect(formatNumber(1.2345678912345, precision)).toBe('1.23456789123');
+    expect(formatSignificantDigits(1.2345678912345, 1000)).toBe('1.23456789123');
+    expect(formatSignificantDigits(12.34, -1000)).toBe('10');
+    expect(roundToSignificantDigits(1.2345678912345, 1000)).toBe(1.23456789123);
+    expect(roundNumber(12.34, { ...precision, significantDigits: -1000 })).toBe(10);
+  });
+
   it('rounds exported values without mutating internal placement calculations', () => {
     const settings = {
       ...DEFAULT_SETTINGS,
@@ -104,5 +148,20 @@ describe('export formatting', () => {
     );
 
     expect(csv.split('\n')[1]).toBe('D1,0,0,3.33,0,3.33,0,0,0,0,3.33,0,0');
+  });
+
+  it('normalizes tabs and newlines inside TSV cells', () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      count: 1,
+      reference: { ...DEFAULT_SETTINGS.reference, prefix: 'D\tbad\nline\r' },
+    };
+    const tsv = formatPlacementsAsTsv(calculatePlacements(settings), exportOptions({ decimalPlaces: 3 }));
+    const lines = tsv.split('\n');
+    const dataColumns = lines[1].split('\t');
+
+    expect(lines).toHaveLength(3);
+    expect(dataColumns).toHaveLength(13);
+    expect(dataColumns[0]).toBe('D bad line 1');
   });
 });
