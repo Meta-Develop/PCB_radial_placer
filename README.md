@@ -126,7 +126,12 @@ npm run preview
 The Vite config uses `base: './'`, so the generated `dist/` directory can be
 served from a repository subpath on GitHub Pages.
 
-One simple deployment flow:
+This repository includes `.github/workflows/pages.yml`, which builds and deploys
+the static app to GitHub Pages on pushes to `main` and from manual
+`workflow_dispatch` runs. In the repository settings, configure Pages to use
+GitHub Actions as the publishing source.
+
+The workflow runs:
 
 ```bash
 npm ci
@@ -134,9 +139,26 @@ npm run test:run
 npm run build
 ```
 
-Then publish the contents of `dist/` with your preferred GitHub Pages workflow,
-for example the official Pages artifact upload action. No backend server is
-required.
+It then uploads the generated `dist/` directory as the Pages artifact and deploys
+that artifact. No backend server is required.
+
+## Offline PWA Behavior
+
+The production build registers `public/service-worker.js` after the page loads.
+Local Vite development (`npm run dev`) does not register the service worker.
+
+After the first successful online load, the service worker caches:
+
+- The app shell: root page, `index.html`, manifest, preview image, and app icon.
+- Same-origin Vite build assets under `assets/`, first by reading the built
+  `index.html` during service-worker install and later as matching files are
+  requested.
+
+When offline, navigation requests fall back to the cached app shell if it is
+available. A first-ever visit still requires network access, and browsers may
+evict offline caches under storage pressure. Presets remain local to the current
+browser profile through `localStorage`; there is no backend sync, analytics, or
+network API.
 
 ## Validation Notes
 
@@ -174,4 +196,3 @@ component body sizes, locked footprints, board clearances, or board boundaries.
 - Bottom-side mirroring support.
 - CSV import and point-set transforms.
 - Shareable URL query settings.
-- Optional PWA offline cache.
