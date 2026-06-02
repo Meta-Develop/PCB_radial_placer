@@ -10,15 +10,15 @@ interface DistributionGraphProps {
 }
 
 const GRAPH_WIDTH = 720;
-const GRAPH_HEIGHT = 280;
+const GRAPH_HEIGHT = 248;
 const LEFT = 56;
 const RIGHT = 24;
-const TOP = 28;
-const ANGLE_Y = 68;
-const PROFILE_TOP = 118;
-const PROFILE_BOTTOM = 220;
-const STEP_TOP = 244;
-const STEP_BOTTOM = 268;
+const TOP = 24;
+const ANGLE_Y = 56;
+const PROFILE_TOP = 112;
+const PROFILE_BOTTOM = 178;
+const STEP_TOP = 220;
+const STEP_BOTTOM = 238;
 
 function scaleValue(value: number, min: number, max: number, start: number, end: number): number {
   if (Math.abs(max - min) < 1e-12) {
@@ -138,9 +138,7 @@ export function DistributionGraph({ placements, settings, text }: DistributionGr
       <div className="section-heading">
         <div>
           <h2 id="graph-heading">{text.heading}</h2>
-          <p>
-            {text.subtitle(placements.length, settings.angleMode === 'arc' ? text.arcSpan : text.angleSpan)}
-          </p>
+          <p>{text.subtitle(placements.length, settings.angleMode === 'arc' ? text.arcSpan : text.angleSpan)}</p>
         </div>
       </div>
       <div className="graph-frame" dangerouslySetInnerHTML={{ __html: svgMarkup }} />
