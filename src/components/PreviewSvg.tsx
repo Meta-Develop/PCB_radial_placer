@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Placement, PlacementSettings } from '../types';
 import { downloadTextFile } from '../core/download';
 import { parseNumericExpression } from '../core/expression';
+import { rotateLocalOffset } from '../core/geometry';
 import type { Language, UiText } from '../i18n';
 import { translateExpressionError } from '../i18n';
 
@@ -86,10 +87,10 @@ export function buildPreviewSvg(
     .map((placement) => {
       const origin = project(placement.x, placement.y);
       const targetCenter = project(placement.targetCenterX, placement.targetCenterY);
-      const rotationRad = (placement.rotationDeg * Math.PI) / 180;
+      const rotationVector = rotateLocalOffset(18, 0, placement.rotationDeg, settings.coordinateSystem);
       const rotationEnd = {
-        x: origin.x + 18 * Math.cos(rotationRad),
-        y: origin.y + (yDown ? 18 : -18) * Math.sin(rotationRad),
+        x: origin.x + rotationVector.x,
+        y: origin.y + (yDown ? rotationVector.y : -rotationVector.y),
       };
       const label = showLabels
         ? `<text x="${targetCenter.x + 8}" y="${targetCenter.y - 8}" class="svg-label">${escapeXml(placement.ref)}</text>`

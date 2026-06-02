@@ -43,6 +43,7 @@ export function calculatePlacements(settings: PlacementSettings): Placement[] {
       settings.componentOffset.x,
       settings.componentOffset.y,
       rotationDeg,
+      settings.coordinateSystem,
     );
 
     return {

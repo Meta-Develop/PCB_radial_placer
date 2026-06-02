@@ -67,7 +67,7 @@ describe('PreviewSvg coordinate convention', () => {
     expect(Number(line.getAttribute('y2'))).toBeLessThan(Number(line.getAttribute('y1')));
   });
 
-  it('draws +90 degree rotation downward in screen / ECAD Y-down mode', () => {
+  it('draws +90 degree rotation along the flipped radial direction in screen / ECAD Y-down mode', () => {
     const settings = {
       ...DEFAULT_SETTINGS,
       count: 1,
@@ -77,7 +77,7 @@ describe('PreviewSvg coordinate convention', () => {
     };
     const line = rotationLine(buildPreviewSvg(calculatePlacements(settings), settings, true, true, 0));
 
-    expect(Number(line.getAttribute('y2'))).toBeGreaterThan(Number(line.getAttribute('y1')));
+    expect(Number(line.getAttribute('y2'))).toBeLessThan(Number(line.getAttribute('y1')));
   });
 
   it('places the +Y axis label away from the top placement label', () => {

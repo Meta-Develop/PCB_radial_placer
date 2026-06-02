@@ -52,8 +52,9 @@ y = centerY - radius * sin(theta)
 ```
 
 - `rotationDeg` is an output/CAD coordinate angle. `0 deg` points along `+X`.
-  In mathematical Y-up mode, `+90 deg` points output `+Y` upward. In screen /
-  ECAD Y-down mode, `+90 deg` points output `+Y` downward.
+  In mathematical Y-up mode, `+90 deg` points toward output `+Y`. In screen /
+  ECAD Y-down mode, the same flipped sine convention means `+90 deg` points
+  toward output `-Y`.
 
 ## Numeric Expressions
 
