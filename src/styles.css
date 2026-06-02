@@ -64,7 +64,8 @@ select {
   height: 2.35rem;
 }
 
-input[aria-invalid="true"] {
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
   border-color: #dc2626;
   background: #fff7f7;
 }

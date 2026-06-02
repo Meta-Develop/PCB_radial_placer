@@ -88,6 +88,22 @@ describe('preset/settings normalization', () => {
     expect(parsed.inputExpressions.significantDigits).toBe('2 + 3');
   });
 
+  it('normalizes and round-trips individual angle mode settings', () => {
+    const parsed = parsePresetImport(
+      JSON.stringify({
+        settings: {
+          count: 3,
+          angleMode: 'individualAngles',
+          individualAnglesText: '0, 360/8, 90 + 45',
+        },
+      }),
+    );
+
+    expect(parsed.count).toBe(3);
+    expect(parsed.angleMode).toBe('individualAngles');
+    expect(parsed.individualAnglesText).toBe('0, 360/8, 90 + 45');
+  });
+
   it('defaults v1 presets without component origin offsets or expression metadata', () => {
     const normalized = normalizePlacementSettings({
       count: 3,
@@ -99,6 +115,7 @@ describe('preset/settings normalization', () => {
     expect(normalized.startAngleOffsetDeg).toBe(0);
     expect(normalized.outputPrecisionMode).toBe('decimalPlaces');
     expect(normalized.significantDigits).toBe(DEFAULT_SETTINGS.significantDigits);
+    expect(normalized.individualAnglesText).toBe('');
     expect(normalized.inputExpressions).toEqual({});
   });
 

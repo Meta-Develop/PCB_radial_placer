@@ -87,9 +87,10 @@ export function normalizePlacementSettings(input: unknown): PlacementSettings {
     ),
     angleMode: enumValue<AngleMode>(
       raw.angleMode,
-      ['fullCircle', 'customStep', 'arc'],
+      ['fullCircle', 'customStep', 'arc', 'individualAngles'],
       DEFAULT_SETTINGS.angleMode,
     ),
+    individualAnglesText: stringValue(raw.individualAnglesText, DEFAULT_SETTINGS.individualAnglesText),
     includeEndpoint: booleanValue(raw.includeEndpoint, DEFAULT_SETTINGS.includeEndpoint),
     unit: enumValue<Unit>(raw.unit, ['mm', 'inch', 'mil', 'unitless'], DEFAULT_SETTINGS.unit),
     outputPrecisionMode: enumValue<OutputPrecisionMode>(

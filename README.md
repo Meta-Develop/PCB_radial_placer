@@ -13,7 +13,8 @@ Live app: <https://meta-develop.github.io/PCB_radial_placer/>
   rings, switch rings, rotary controls, and sensor arrays.
 - Keeps ECAD coordinate assumptions explicit: units, center offset, axis
   direction, angle direction, rotation convention, and footprint-origin offset.
-- Supports full-circle, custom-step, and arc placement modes.
+- Supports full-circle, custom-step, arc, and per-component individual-angle
+  placement modes.
 - In Arc mode, `Arc end angle` is the arc target endpoint. `Start angle offset`
   is applied first, so the effective first angle is:
 
@@ -24,6 +25,10 @@ theta = effectiveStartAngle + index * stepAngle
 
 - Direction controls the step sign. Counterclockwise uses positive angular
   steps; clockwise uses negative angular steps.
+- Individual angles mode uses one manually listed angle per component. Entries
+  can be separated with commas, semicolons, or newlines, and each entry accepts
+  the same deterministic numeric expression syntax as other numeric fields.
+  `Count` remains authoritative and must match the number of angle entries.
 - Output formatting can use fixed decimal places or significant digits.
 - The app exports coordinate data only. It does not edit native ECAD board
   files.

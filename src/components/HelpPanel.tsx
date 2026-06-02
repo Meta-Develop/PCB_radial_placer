@@ -25,6 +25,9 @@ export function HelpPanel({ settings, text }: HelpPanelProps) {
             {text.arc}
           </p>
           <p>
+            {text.individualAngles}
+          </p>
+          <p>
             {text.expressions}
           </p>
           <p>
