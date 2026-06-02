@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">PCB Radial Placer icon</title>
+  <desc id="desc">A circuit board target with radial component points.</desc>
+  <rect width="512" height="512" rx="96" fill="#0f766e" />
+  <circle cx="256" cy="256" r="178" fill="none" stroke="#d9f99d" stroke-width="22" />
+  <circle cx="256" cy="256" r="72" fill="#ecfeff" />
+  <g fill="#ecfeff">
+    <circle cx="256" cy="78" r="25" />
+    <circle cx="382" cy="130" r="25" />
+    <circle cx="434" cy="256" r="25" />
+    <circle cx="382" cy="382" r="25" />
+    <circle cx="256" cy="434" r="25" />
+    <circle cx="130" cy="382" r="25" />
+    <circle cx="78" cy="256" r="25" />
+    <circle cx="130" cy="130" r="25" />
+  </g>
+  <g stroke="#99f6e4" stroke-linecap="round" stroke-width="18">
+    <path d="M256 150v-48" />
+    <path d="M331 181l34-34" />
+    <path d="M362 256h48" />
+    <path d="M331 331l34 34" />
+    <path d="M256 362v48" />
+    <path d="M181 331l-34 34" />
+    <path d="M150 256h-48" />
+    <path d="M181 181l-34-34" />
+  </g>
+</svg>
