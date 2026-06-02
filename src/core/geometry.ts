@@ -12,6 +12,25 @@ export function ySign(coordinateSystem: CoordinateSystem): number {
   return coordinateSystem === 'mathYUp' ? 1 : -1;
 }
 
+export function effectiveStartAngleDeg(settings: PlacementSettings): number {
+  return settings.startAngleDeg + settings.startAngleOffsetDeg;
+}
+
+function positiveModulo(value: number, modulo: number): number {
+  const remainder = value % modulo;
+  return remainder < 0 ? remainder + modulo : remainder;
+}
+
+export function calculateDirectedArcSpan(settings: PlacementSettings): number {
+  const rawSpan = settings.endAngleDeg - effectiveStartAngleDeg(settings);
+
+  if (settings.direction === 'counterclockwise') {
+    return rawSpan >= 0 ? rawSpan : positiveModulo(rawSpan, 360);
+  }
+
+  return rawSpan <= 0 ? rawSpan : -positiveModulo(-rawSpan, 360);
+}
+
 export function calculateStepAngle(settings: PlacementSettings): number {
   if (!Number.isFinite(settings.count) || settings.count <= 0) {
     return Number.NaN;
@@ -32,8 +51,7 @@ export function calculateStepAngle(settings: PlacementSettings): number {
     return Number.NaN;
   }
 
-  const span = Math.abs(settings.endAngleDeg - settings.startAngleDeg);
-  return sign * (span / denominator);
+  return calculateDirectedArcSpan(settings) / denominator;
 }
 
 export function polarToCartesian(
@@ -47,6 +65,21 @@ export function polarToCartesian(
   return {
     x: centerX + radius * Math.cos(thetaRad),
     y: centerY + ySign(coordinateSystem) * radius * Math.sin(thetaRad),
+  };
+}
+
+export function rotateLocalOffset(
+  offsetX: number,
+  offsetY: number,
+  rotationDeg: number,
+): Point {
+  const rotationRad = degreesToRadians(rotationDeg);
+  const cos = Math.cos(rotationRad);
+  const sin = Math.sin(rotationRad);
+
+  return {
+    x: offsetX * cos - offsetY * sin,
+    y: offsetX * sin + offsetY * cos,
   };
 }
 

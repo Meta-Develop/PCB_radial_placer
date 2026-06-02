@@ -1,16 +1,108 @@
 import type { ChangeEvent } from 'react';
-import type { AngleMode, CoordinateSystem, Direction, PlacementSettings, RotationMode, RotationNormalizeMode, Unit } from '../types';
+import { parseNumericExpression } from '../core/expression';
+import { getNumericFieldValue, setNumericFieldValue } from '../core/numericFields';
+import type { Language, UiText } from '../i18n';
+import { translateExpressionError } from '../i18n';
+import type {
+  AngleMode,
+  CoordinateSystem,
+  Direction,
+  NumericExpressionField,
+  OutputPrecisionMode,
+  PlacementSettings,
+  RotationMode,
+  RotationNormalizeMode,
+  Unit,
+} from '../types';
 
 interface InputPanelProps {
   settings: PlacementSettings;
   onChange: (settings: PlacementSettings) => void;
+  language: Language;
+  text: UiText['input'];
 }
 
-function toNumber(event: ChangeEvent<HTMLInputElement>): number {
-  return event.target.value === '' ? Number.NaN : Number(event.target.value);
+interface NumericInputProps {
+  field: NumericExpressionField;
+  label: string;
+  settings: PlacementSettings;
+  onChange: (settings: PlacementSettings) => void;
+  language: Language;
+  disabled?: boolean;
+  help?: string;
 }
 
-export function InputPanel({ settings, onChange }: InputPanelProps) {
+function formatInputNumber(value: number): string {
+  return Number.isFinite(value) ? String(value) : '';
+}
+
+function formatResolvedNumber(value: number): string {
+  if (Object.is(value, -0)) {
+    return '0';
+  }
+  if (Math.abs(value) >= 1e6 || (Math.abs(value) > 0 && Math.abs(value) < 1e-5)) {
+    return Number(value.toPrecision(12)).toString();
+  }
+  return Number(value.toFixed(12)).toString();
+}
+
+function shouldKeepRawExpression(rawValue: string, parsedValue: number, isExpression: boolean): boolean {
+  return isExpression || rawValue.trim() !== String(parsedValue);
+}
+
+function NumericExpressionInput({
+  field,
+  label,
+  settings,
+  onChange,
+  language,
+  disabled = false,
+  help,
+}: NumericInputProps) {
+  const rawValue = settings.inputExpressions[field] ?? formatInputNumber(getNumericFieldValue(settings, field));
+  const parsed = parseNumericExpression(rawValue);
+  const showResult = parsed.ok && parsed.isExpression;
+  const invalid = !parsed.ok;
+
+  const updateRawValue = (value: string) => {
+    const nextExpressions = { ...settings.inputExpressions };
+    const nextParsed = parseNumericExpression(value);
+    let nextSettings = settings;
+
+    if (nextParsed.ok) {
+      nextSettings = setNumericFieldValue(nextSettings, field, nextParsed.value);
+      if (shouldKeepRawExpression(value, nextParsed.value, nextParsed.isExpression)) {
+        nextExpressions[field] = value;
+      } else {
+        delete nextExpressions[field];
+      }
+    } else {
+      nextExpressions[field] = value;
+    }
+
+    onChange({ ...nextSettings, inputExpressions: nextExpressions });
+  };
+
+  return (
+    <label>
+      {label}
+      <input
+        type="text"
+        inputMode="decimal"
+        spellCheck={false}
+        disabled={disabled}
+        value={rawValue}
+        aria-invalid={invalid ? 'true' : undefined}
+        onChange={(event) => updateRawValue(event.target.value)}
+      />
+      {help ? <span className="field-help">{help}</span> : null}
+      {showResult ? <span className="field-evaluation">= {formatResolvedNumber(parsed.value)}</span> : null}
+      {invalid ? <span className="field-error">{translateExpressionError(parsed.error, language)}</span> : null}
+    </label>
+  );
+}
+
+export function InputPanel({ settings, onChange, language, text }: InputPanelProps) {
   const update = <K extends keyof PlacementSettings>(key: K, value: PlacementSettings[K]) => {
     onChange({ ...settings, [key]: value });
   };
@@ -29,125 +121,78 @@ export function InputPanel({ settings, onChange }: InputPanelProps) {
     onChange({ ...settings, rotation: { ...settings.rotation, [key]: value } });
   };
 
+  const numericInput = (field: NumericExpressionField, label: string, disabled = false, help?: string) => (
+    <NumericExpressionInput
+      field={field}
+      label={label}
+      settings={settings}
+      onChange={onChange}
+      language={language}
+      disabled={disabled}
+      help={help}
+    />
+  );
+
   return (
     <section className="panel input-panel" aria-labelledby="input-heading">
       <div className="section-heading">
-        <h2 id="input-heading">Placement Inputs</h2>
+        <h2 id="input-heading">{text.heading}</h2>
       </div>
 
       <fieldset>
-        <legend>Geometry</legend>
+        <legend>{text.geometry}</legend>
+        {numericInput('count', text.count)}
+        {numericInput('radius', text.radius)}
+        {numericInput('centerX', text.centerX)}
+        {numericInput('centerY', text.centerY)}
+        {numericInput('startAngleDeg', text.startAngle)}
+        {numericInput('startAngleOffsetDeg', text.startAngleOffset, false, text.startAngleOffsetHelp)}
         <label>
-          Count
-          <input
-            type="number"
-            min={1}
-            step={1}
-            value={Number.isFinite(settings.count) ? settings.count : ''}
-            onChange={(event) => update('count', Math.trunc(toNumber(event)))}
-          />
-        </label>
-        <label>
-          Radius
-          <input
-            type="number"
-            step="any"
-            min={0}
-            value={Number.isFinite(settings.radius) ? settings.radius : ''}
-            onChange={(event) => update('radius', toNumber(event))}
-          />
-        </label>
-        <label>
-          Center X
-          <input
-            type="number"
-            step="any"
-            value={Number.isFinite(settings.centerX) ? settings.centerX : ''}
-            onChange={(event) => update('centerX', toNumber(event))}
-          />
-        </label>
-        <label>
-          Center Y
-          <input
-            type="number"
-            step="any"
-            value={Number.isFinite(settings.centerY) ? settings.centerY : ''}
-            onChange={(event) => update('centerY', toNumber(event))}
-          />
-        </label>
-        <label>
-          Start angle
-          <input
-            type="number"
-            step="any"
-            value={Number.isFinite(settings.startAngleDeg) ? settings.startAngleDeg : ''}
-            onChange={(event) => update('startAngleDeg', toNumber(event))}
-          />
-        </label>
-        <label>
-          Direction
+          {text.direction}
           <select
             value={settings.direction}
             onChange={(event) => update('direction', event.target.value as Direction)}
           >
-            <option value="counterclockwise">Counterclockwise</option>
-            <option value="clockwise">Clockwise</option>
+            <option value="counterclockwise">{text.directionOptions.counterclockwise}</option>
+            <option value="clockwise">{text.directionOptions.clockwise}</option>
           </select>
         </label>
         <label>
-          Coordinate system
+          {text.coordinateSystem}
           <select
             value={settings.coordinateSystem}
             onChange={(event) => update('coordinateSystem', event.target.value as CoordinateSystem)}
           >
-            <option value="mathYUp">Mathematical Y-up</option>
-            <option value="ecadYDown">Screen / ECAD Y-down</option>
+            <option value="mathYUp">{text.coordinateOptions.mathYUp}</option>
+            <option value="ecadYDown">{text.coordinateOptions.ecadYDown}</option>
           </select>
         </label>
         <label>
-          Unit
+          {text.unit}
           <select value={settings.unit} onChange={(event) => update('unit', event.target.value as Unit)}>
-            <option value="mm">mm</option>
-            <option value="inch">inch</option>
-            <option value="mil">mil</option>
-            <option value="unitless">unitless</option>
+            <option value="mm">{text.unitOptions.mm}</option>
+            <option value="inch">{text.unitOptions.inch}</option>
+            <option value="mil">{text.unitOptions.mil}</option>
+            <option value="unitless">{text.unitOptions.unitless}</option>
           </select>
         </label>
       </fieldset>
 
       <fieldset className="angle-mode-fieldset">
-        <legend>Angle Mode</legend>
+        <legend>{text.angleMode}</legend>
         <label className="field-wide">
-          Mode
+          {text.mode}
           <select
             value={settings.angleMode}
             onChange={(event) => update('angleMode', event.target.value as AngleMode)}
           >
-            <option value="fullCircle">Full circle: 360 / count</option>
-            <option value="customStep">Custom step</option>
-            <option value="arc">Arc between start and end</option>
+            <option value="fullCircle">{text.angleModeOptions.fullCircle}</option>
+            <option value="customStep">{text.angleModeOptions.customStep}</option>
+            <option value="arc">{text.angleModeOptions.arc}</option>
           </select>
         </label>
-        <label>
-          Step angle
-          <input
-            type="number"
-            step="any"
-            disabled={settings.angleMode !== 'customStep'}
-            value={Number.isFinite(settings.stepAngleDeg) ? settings.stepAngleDeg : ''}
-            onChange={(event) => update('stepAngleDeg', toNumber(event))}
-          />
-        </label>
-        <label>
-          End angle
-          <input
-            type="number"
-            step="any"
-            disabled={settings.angleMode !== 'arc'}
-            value={Number.isFinite(settings.endAngleDeg) ? settings.endAngleDeg : ''}
-            onChange={(event) => update('endAngleDeg', toNumber(event))}
-          />
-        </label>
+        {numericInput('stepAngleDeg', text.stepAngle, settings.angleMode !== 'customStep')}
+        {numericInput('endAngleDeg', text.arcEndAngle, settings.angleMode !== 'arc', text.arcEndHelp)}
         <label className="inline-control">
           <input
             type="checkbox"
@@ -155,124 +200,85 @@ export function InputPanel({ settings, onChange }: InputPanelProps) {
             checked={settings.includeEndpoint}
             onChange={(event) => update('includeEndpoint', event.target.checked)}
           />
-          Include arc endpoint
+          {text.includeArcEndpoint}
         </label>
       </fieldset>
 
       <fieldset>
-        <legend>Reference Designators</legend>
+        <legend>{text.referenceDesignators}</legend>
         <label>
-          Prefix
+          {text.prefix}
           <input
             type="text"
             value={settings.reference.prefix}
-            onChange={(event) => updateReference('prefix', event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => updateReference('prefix', event.target.value)}
           />
         </label>
-        <label>
-          Start number
-          <input
-            type="number"
-            step={1}
-            value={Number.isFinite(settings.reference.startNumber) ? settings.reference.startNumber : ''}
-            onChange={(event) => updateReference('startNumber', Math.trunc(toNumber(event)))}
-          />
-        </label>
-        <label>
-          Padding
-          <input
-            type="number"
-            min={0}
-            max={8}
-            step={1}
-            value={Number.isFinite(settings.reference.padding) ? settings.reference.padding : ''}
-            onChange={(event) => updateReference('padding', Math.trunc(toNumber(event)))}
-          />
-        </label>
+        {numericInput('reference.startNumber', text.startNumber)}
+        {numericInput('reference.padding', text.padding)}
       </fieldset>
 
       <fieldset>
-        <legend>Rotation</legend>
+        <legend>{text.rotation}</legend>
         <label>
-          Mode
+          {text.mode}
           <select
             value={settings.rotation.mode}
             onChange={(event) => updateRotation('mode', event.target.value as RotationMode)}
           >
-            <option value="fixed">Fixed</option>
-            <option value="radialOutward">Radial outward</option>
-            <option value="radialInward">Radial inward</option>
-            <option value="tangentClockwise">Tangent clockwise</option>
-            <option value="tangentCounterclockwise">Tangent counterclockwise</option>
-            <option value="customFormulaSimple">Custom: a * theta + b</option>
+            <option value="fixed">{text.rotationOptions.fixed}</option>
+            <option value="radialOutward">{text.rotationOptions.radialOutward}</option>
+            <option value="radialInward">{text.rotationOptions.radialInward}</option>
+            <option value="tangentClockwise">{text.rotationOptions.tangentClockwise}</option>
+            <option value="tangentCounterclockwise">{text.rotationOptions.tangentCounterclockwise}</option>
+            <option value="customFormulaSimple">{text.rotationOptions.customFormulaSimple}</option>
           </select>
         </label>
+        {numericInput('rotation.fixedRotationDeg', text.fixedRotation, settings.rotation.mode !== 'fixed')}
+        {numericInput(
+          'rotation.rotationOffsetDeg',
+          text.offset,
+          settings.rotation.mode === 'fixed' || settings.rotation.mode === 'customFormulaSimple',
+        )}
+        {numericInput('rotation.formulaA', text.formulaA, settings.rotation.mode !== 'customFormulaSimple')}
+        {numericInput('rotation.formulaB', text.formulaB, settings.rotation.mode !== 'customFormulaSimple')}
         <label>
-          Fixed rotation
-          <input
-            type="number"
-            step="any"
-            disabled={settings.rotation.mode !== 'fixed'}
-            value={Number.isFinite(settings.rotation.fixedRotationDeg) ? settings.rotation.fixedRotationDeg : ''}
-            onChange={(event) => updateRotation('fixedRotationDeg', toNumber(event))}
-          />
-        </label>
-        <label>
-          Offset
-          <input
-            type="number"
-            step="any"
-            disabled={settings.rotation.mode === 'fixed' || settings.rotation.mode === 'customFormulaSimple'}
-            value={Number.isFinite(settings.rotation.rotationOffsetDeg) ? settings.rotation.rotationOffsetDeg : ''}
-            onChange={(event) => updateRotation('rotationOffsetDeg', toNumber(event))}
-          />
-        </label>
-        <label>
-          Formula a
-          <input
-            type="number"
-            step="any"
-            disabled={settings.rotation.mode !== 'customFormulaSimple'}
-            value={Number.isFinite(settings.rotation.formulaA) ? settings.rotation.formulaA : ''}
-            onChange={(event) => updateRotation('formulaA', toNumber(event))}
-          />
-        </label>
-        <label>
-          Formula b
-          <input
-            type="number"
-            step="any"
-            disabled={settings.rotation.mode !== 'customFormulaSimple'}
-            value={Number.isFinite(settings.rotation.formulaB) ? settings.rotation.formulaB : ''}
-            onChange={(event) => updateRotation('formulaB', toNumber(event))}
-          />
-        </label>
-        <label>
-          Normalize
+          {text.normalize}
           <select
             value={settings.rotation.normalize}
             onChange={(event) => updateRotation('normalize', event.target.value as RotationNormalizeMode)}
           >
-            <option value="zeroTo360">0 to 360</option>
-            <option value="minus180To180">-180 to 180</option>
-            <option value="none">None</option>
+            <option value="zeroTo360">{text.normalizeOptions.zeroTo360}</option>
+            <option value="minus180To180">{text.normalizeOptions.minus180To180}</option>
+            <option value="none">{text.normalizeOptions.none}</option>
           </select>
         </label>
       </fieldset>
 
       <fieldset>
-        <legend>Output</legend>
+        <legend>{text.componentOriginOffset}</legend>
+        {numericInput('componentOffset.x', text.localOffsetX)}
+        {numericInput('componentOffset.y', text.localOffsetY)}
+      </fieldset>
+
+      <fieldset>
+        <legend>{text.output}</legend>
         <label>
-          Decimal places
-          <input
-            type="number"
-            min={0}
-            max={9}
-            step={1}
-            value={Number.isFinite(settings.decimalPlaces) ? settings.decimalPlaces : ''}
-            onChange={(event) => update('decimalPlaces', Math.trunc(toNumber(event)))}
-          />
+          {text.precisionMode}
+          <select
+            value={settings.outputPrecisionMode}
+            onChange={(event) => update('outputPrecisionMode', event.target.value as OutputPrecisionMode)}
+          >
+            <option value="decimalPlaces">{text.precisionModeOptions.decimalPlaces}</option>
+            <option value="significantDigits">{text.precisionModeOptions.significantDigits}</option>
+          </select>
         </label>
+        {numericInput('decimalPlaces', text.decimalPlaces, settings.outputPrecisionMode !== 'decimalPlaces')}
+        {numericInput(
+          'significantDigits',
+          text.significantDigits,
+          settings.outputPrecisionMode !== 'significantDigits',
+        )}
         <label className="inline-control">
           <input
             type="checkbox"
@@ -281,7 +287,7 @@ export function InputPanel({ settings, onChange }: InputPanelProps) {
               onChange({ ...settings, export: { ...settings.export, includeHeaders: event.target.checked } })
             }
           />
-          Include export headers
+          {text.includeExportHeaders}
         </label>
       </fieldset>
     </section>

@@ -6,13 +6,16 @@ export const DEFAULT_SETTINGS: PlacementSettings = {
   centerX: 0,
   centerY: 0,
   startAngleDeg: 0,
+  startAngleOffsetDeg: 0,
   endAngleDeg: 180,
   stepAngleDeg: 45,
   direction: 'counterclockwise',
   angleMode: 'fullCircle',
   includeEndpoint: true,
   unit: 'mm',
+  outputPrecisionMode: 'decimalPlaces',
   decimalPlaces: 3,
+  significantDigits: 4,
   coordinateSystem: 'mathYUp',
   reference: {
     prefix: 'D',
@@ -27,9 +30,14 @@ export const DEFAULT_SETTINGS: PlacementSettings = {
     formulaA: 1,
     formulaB: 0,
   },
+  componentOffset: {
+    x: 0,
+    y: 0,
+  },
   export: {
     includeHeaders: true,
   },
+  inputExpressions: {},
 };
 
 export const EXAMPLE_PRESETS: Array<{ name: string; settings: PlacementSettings }> = [

@@ -9,7 +9,9 @@ function settings(overrides: Partial<PlacementSettings>): PlacementSettings {
     ...overrides,
     reference: { ...DEFAULT_SETTINGS.reference, ...overrides.reference },
     rotation: { ...DEFAULT_SETTINGS.rotation, ...overrides.rotation },
+    componentOffset: { ...DEFAULT_SETTINGS.componentOffset, ...overrides.componentOffset },
     export: { ...DEFAULT_SETTINGS.export, ...overrides.export },
+    inputExpressions: { ...DEFAULT_SETTINGS.inputExpressions, ...overrides.inputExpressions },
   };
 }
 
@@ -70,11 +72,104 @@ describe('calculatePlacements', () => {
     expect(placements.map((placement) => placement.angleDeg)).toEqual([0, 30, 60, 90]);
   });
 
+  it('adds start angle offset to the first placement angle', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 4,
+        radius: 10,
+        startAngleDeg: 0,
+        startAngleOffsetDeg: 45,
+      }),
+    );
+
+    expect(placements.map((placement) => placement.angleDeg)).toEqual([45, 135, 225, 315]);
+    closeTo(placements[0].x, Math.sqrt(50));
+    closeTo(placements[0].y, Math.sqrt(50));
+  });
+
+  it('uses the effective start angle when targeting an arc endpoint', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 4,
+        radius: 10,
+        angleMode: 'arc',
+        startAngleDeg: 0,
+        startAngleOffsetDeg: 15,
+        endAngleDeg: 90,
+        includeEndpoint: true,
+      }),
+    );
+
+    expect(placements.map((placement) => placement.angleDeg)).toEqual([15, 40, 65, 90]);
+  });
+
+  it('uses the selected direction to reach a coterminal arc endpoint', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 4,
+        radius: 10,
+        angleMode: 'arc',
+        startAngleDeg: 0,
+        endAngleDeg: -90,
+        direction: 'counterclockwise',
+        includeEndpoint: true,
+      }),
+    );
+
+    expect(placements.map((placement) => placement.angleDeg)).toEqual([0, 90, 180, 270]);
+  });
+
   it('generates padded reference designators', () => {
     const placements = calculatePlacements(
       settings({ count: 3, reference: { prefix: 'LED', startNumber: 1, padding: 2 } }),
     );
 
     expect(placements.map((placement) => placement.ref)).toEqual(['LED01', 'LED02', 'LED03']);
+  });
+
+  it('keeps exported origin equal to target center when component offset is zero', () => {
+    const placements = calculatePlacements(settings({ count: 1, radius: 10, componentOffset: { x: 0, y: 0 } }));
+
+    closeTo(placements[0].x, placements[0].targetCenterX);
+    closeTo(placements[0].y, placements[0].targetCenterY);
+    closeTo(placements[0].appliedOffsetX, 0);
+    closeTo(placements[0].appliedOffsetY, 0);
+  });
+
+  it('subtracts local component offset rotated by fixed output rotation', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 1,
+        radius: 10,
+        rotation: { ...DEFAULT_SETTINGS.rotation, mode: 'fixed', fixedRotationDeg: 90, normalize: 'none' },
+        componentOffset: { x: 2, y: 0 },
+      }),
+    );
+
+    closeTo(placements[0].targetCenterX, 10);
+    closeTo(placements[0].targetCenterY, 0);
+    closeTo(placements[0].appliedOffsetX, 0);
+    closeTo(placements[0].appliedOffsetY, 2);
+    closeTo(placements[0].x, 10);
+    closeTo(placements[0].y, -2);
+  });
+
+  it('uses Y-down output coordinates when rotating component offset', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 1,
+        radius: 10,
+        coordinateSystem: 'ecadYDown',
+        rotation: { ...DEFAULT_SETTINGS.rotation, mode: 'fixed', fixedRotationDeg: 90, normalize: 'none' },
+        componentOffset: { x: 2, y: 0 },
+      }),
+    );
+
+    closeTo(placements[0].targetCenterX, 10);
+    closeTo(placements[0].targetCenterY, 0);
+    closeTo(placements[0].appliedOffsetX, 0);
+    closeTo(placements[0].appliedOffsetY, 2);
+    closeTo(placements[0].x, 10);
+    closeTo(placements[0].y, -2);
   });
 });

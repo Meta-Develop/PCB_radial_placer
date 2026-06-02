@@ -9,12 +9,14 @@ describe('validateSettings', () => {
       count: 0,
       radius: -1,
       decimalPlaces: 12,
+      significantDigits: 0,
     });
 
     expect(result.valid).toBe(false);
     expect(result.messages.some((message) => message.field === 'count')).toBe(true);
     expect(result.messages.some((message) => message.field === 'radius')).toBe(true);
     expect(result.messages.some((message) => message.field === 'decimalPlaces')).toBe(true);
+    expect(result.messages.some((message) => message.field === 'significantDigits')).toBe(true);
   });
 
   it('warns about duplicate coordinates with zero radius', () => {
@@ -33,5 +35,18 @@ describe('validateSettings', () => {
     });
 
     expect(result.valid).toBe(false);
+  });
+
+  it('reports invalid expression text instead of silently coercing it', () => {
+    const result = validateSettings({
+      ...DEFAULT_SETTINGS,
+      radius: 5,
+      inputExpressions: {
+        radius: '10 +',
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.messages.some((message) => message.field === 'radius')).toBe(true);
   });
 });

@@ -59,6 +59,11 @@ textarea {
   padding: 0.4rem 0.55rem;
 }
 
+input[aria-invalid="true"] {
+  border-color: #dc2626;
+  background: #fff7f7;
+}
+
 textarea {
   resize: vertical;
 }
@@ -95,6 +100,51 @@ main {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.45rem;
+}
+
+.header-right {
+  display: grid;
+  justify-items: end;
+  gap: 0.55rem;
+}
+
+.header-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.header-links a {
+  min-height: 2rem;
+  border: 1px solid #516071;
+  border-radius: 6px;
+  color: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  text-decoration: none;
+}
+
+.header-links a:hover {
+  border-color: #14b8a6;
+  color: #99f6e4;
+}
+
+.language-switch {
+  color: #e2e8f0;
+  display: grid;
+  grid-template-columns: auto minmax(8rem, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+
+.language-switch select {
+  min-height: 2rem;
+  border-color: #516071;
+  background: #0f172a;
+  color: #f8fafc;
 }
 
 .header-facts span {
@@ -173,6 +223,31 @@ label {
   font-size: 0.88rem;
   font-weight: 600;
   min-width: 0;
+}
+
+.field-evaluation,
+.field-error,
+.field-help {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.field-evaluation,
+.field-error {
+  font-weight: 700;
+}
+
+.field-evaluation {
+  color: #0f766e;
+}
+
+.field-error {
+  color: #b91c1c;
+}
+
+.field-help {
+  color: #657386;
+  font-weight: 500;
 }
 
 .angle-mode-fieldset .field-wide {
@@ -322,6 +397,22 @@ label {
   min-height: 320px;
 }
 
+.graph-frame {
+  width: 100%;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid #d6deea;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.graph-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 240px;
+}
+
 .table-heading {
   align-items: center;
 }
@@ -337,7 +428,7 @@ label {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 1220px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -395,6 +486,14 @@ code {
   }
 
   .header-facts {
+    justify-content: flex-start;
+  }
+
+  .header-right {
+    justify-items: start;
+  }
+
+  .header-links {
     justify-content: flex-start;
   }
 

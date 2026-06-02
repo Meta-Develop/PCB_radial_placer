@@ -1,5 +1,7 @@
 import type { PlacementSettings, ValidationMessage, ValidationResult } from '../types';
 import { calculateDerivedGeometry, calculateStepAngle } from './geometry';
+import { parseNumericExpression } from './expression';
+import { NUMERIC_EXPRESSION_FIELDS } from './numericFields';
 
 function finiteNumber(value: number): boolean {
   return typeof value === 'number' && Number.isFinite(value);
@@ -37,8 +39,12 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
     add(messages, 'error', 'startAngleDeg', 'Start angle must be a finite number.');
   }
 
+  if (!finiteNumber(settings.startAngleOffsetDeg)) {
+    add(messages, 'error', 'startAngleOffsetDeg', 'Start angle offset must be a finite number.');
+  }
+
   if (!finiteNumber(settings.endAngleDeg)) {
-    add(messages, 'error', 'endAngleDeg', 'End angle must be a finite number.');
+    add(messages, 'error', 'endAngleDeg', 'Arc end angle must be a finite number.');
   }
 
   if (!finiteNumber(settings.stepAngleDeg)) {
@@ -47,6 +53,14 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
 
   if (!Number.isInteger(settings.decimalPlaces) || settings.decimalPlaces < 0 || settings.decimalPlaces > 9) {
     add(messages, 'error', 'decimalPlaces', 'Decimal places must be an integer from 0 to 9.');
+  }
+
+  if (
+    !Number.isInteger(settings.significantDigits) ||
+    settings.significantDigits < 1 ||
+    settings.significantDigits > 12
+  ) {
+    add(messages, 'error', 'significantDigits', 'Significant digits must be an integer from 1 to 12.');
   }
 
   if (!Number.isInteger(settings.reference.startNumber)) {
@@ -71,6 +85,26 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
 
   if (!finiteNumber(settings.rotation.formulaB)) {
     add(messages, 'error', 'formulaB', 'Rotation formula coefficient b must be a finite number.');
+  }
+
+  if (!finiteNumber(settings.componentOffset.x)) {
+    add(messages, 'error', 'componentOffsetX', 'Component local offset X must be a finite number.');
+  }
+
+  if (!finiteNumber(settings.componentOffset.y)) {
+    add(messages, 'error', 'componentOffsetY', 'Component local offset Y must be a finite number.');
+  }
+
+  for (const field of NUMERIC_EXPRESSION_FIELDS) {
+    const expression = settings.inputExpressions[field];
+    if (expression === undefined) {
+      continue;
+    }
+
+    const parsed = parseNumericExpression(expression);
+    if (!parsed.ok) {
+      add(messages, 'error', field, parsed.error);
+    }
   }
 
   if (settings.angleMode === 'arc' && settings.includeEndpoint && settings.count < 2) {

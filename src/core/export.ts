@@ -1,7 +1,21 @@
 import type { ExportFormatOptions, Placement, PlacementSettings } from '../types';
-import { formatNumber, roundedPlacement } from './format';
+import { formatNumber, outputFormatOptions, roundedPlacement } from './format';
 
-const HEADERS = ['Ref', 'Index', 'AngleDeg', 'X', 'Y', 'RotationDeg', 'Radius', 'CenterX', 'CenterY'];
+const HEADERS = [
+  'Ref',
+  'Index',
+  'AngleDeg',
+  'X',
+  'Y',
+  'TargetCenterX',
+  'TargetCenterY',
+  'AppliedOffsetX',
+  'AppliedOffsetY',
+  'RotationDeg',
+  'Radius',
+  'CenterX',
+  'CenterY',
+];
 
 function escapeDelimitedCell(value: string | number, delimiter: ',' | '\t'): string {
   const text = String(value);
@@ -14,17 +28,23 @@ function escapeDelimitedCell(value: string | number, delimiter: ',' | '\t'): str
   return text;
 }
 
-function rowValues(placement: Placement, decimalPlaces: number): Array<string | number> {
+function rowValues(placement: Placement, options: ExportFormatOptions): Array<string | number> {
+  const precision = outputFormatOptions(options);
+
   return [
     placement.ref,
     placement.index,
-    formatNumber(placement.angleDeg, decimalPlaces),
-    formatNumber(placement.x, decimalPlaces),
-    formatNumber(placement.y, decimalPlaces),
-    formatNumber(placement.rotationDeg, decimalPlaces),
-    formatNumber(placement.radius, decimalPlaces),
-    formatNumber(placement.centerX, decimalPlaces),
-    formatNumber(placement.centerY, decimalPlaces),
+    formatNumber(placement.angleDeg, precision),
+    formatNumber(placement.x, precision),
+    formatNumber(placement.y, precision),
+    formatNumber(placement.targetCenterX, precision),
+    formatNumber(placement.targetCenterY, precision),
+    formatNumber(placement.appliedOffsetX, precision),
+    formatNumber(placement.appliedOffsetY, precision),
+    formatNumber(placement.rotationDeg, precision),
+    formatNumber(placement.radius, precision),
+    formatNumber(placement.centerX, precision),
+    formatNumber(placement.centerY, precision),
   ];
 }
 
@@ -34,7 +54,7 @@ export function formatPlacementsAsDelimited(
   delimiter: ',' | '\t',
 ): string {
   const rows = placements.map((placement) =>
-    rowValues(placement, options.decimalPlaces)
+    rowValues(placement, options)
       .map((value) => escapeDelimitedCell(value, delimiter))
       .join(delimiter),
   );
@@ -69,13 +89,15 @@ export function formatPlacementsAsJson(
     {
       settings,
       export: {
+        precisionMode: options.precisionMode,
         decimalPlaces: options.decimalPlaces,
+        significantDigits: options.significantDigits,
         coordinateConvention:
           settings.coordinateSystem === 'mathYUp'
             ? '0 degrees is +X; positive angles are counterclockwise; +Y is up.'
             : '0 degrees is +X; positive mathematical sine is flipped so +Y is down.',
       },
-      placements: placements.map((placement) => roundedPlacement(placement, options.decimalPlaces)),
+      placements: placements.map((placement) => roundedPlacement(placement, outputFormatOptions(options))),
     },
     null,
     2,
