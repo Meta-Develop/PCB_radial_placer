@@ -21,6 +21,30 @@ interface PreviewSvgProps {
 
 const SVG_SIZE = 520;
 const SVG_PADDING = 44;
+const LABEL_FONT_SIZE = 12;
+const LABEL_BOX_PADDING = 3;
+const LABEL_BOUNDS_MARGIN = 4;
+const LABEL_WIDTH_FACTOR = 0.62;
+
+type TextAnchor = 'start' | 'middle' | 'end';
+
+interface TextBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface TextCandidate {
+  x: number;
+  y: number;
+  anchor: TextAnchor;
+}
+
+interface PlacedText extends TextCandidate {
+  text: string;
+  box: TextBox;
+}
 
 function escapeXml(value: string): string {
   return value
@@ -53,6 +77,156 @@ function coordinateExtents(placements: Placement[], settings: PlacementSettings,
   };
 }
 
+function estimateTextBox(text: string, x: number, y: number, anchor: TextAnchor, fontSize = LABEL_FONT_SIZE): TextBox {
+  const textWidth = Math.max(fontSize * 0.75, text.length * fontSize * LABEL_WIDTH_FACTOR);
+  const textHeight = fontSize * 1.25;
+  const textX = anchor === 'end' ? x - textWidth : anchor === 'middle' ? x - textWidth / 2 : x;
+
+  return {
+    x: textX - LABEL_BOX_PADDING,
+    y: y - fontSize - LABEL_BOX_PADDING,
+    width: textWidth + LABEL_BOX_PADDING * 2,
+    height: textHeight + LABEL_BOX_PADDING * 2,
+  };
+}
+
+function boxesOverlap(first: TextBox, second: TextBox): boolean {
+  return (
+    first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y
+  );
+}
+
+function boxFitsSvg(box: TextBox): boolean {
+  return (
+    box.x >= LABEL_BOUNDS_MARGIN &&
+    box.y >= LABEL_BOUNDS_MARGIN &&
+    box.x + box.width <= SVG_SIZE - LABEL_BOUNDS_MARGIN &&
+    box.y + box.height <= SVG_SIZE - LABEL_BOUNDS_MARGIN
+  );
+}
+
+function anchorForOffset(offsetX: number): TextAnchor {
+  if (offsetX < -2) {
+    return 'end';
+  }
+  if (offsetX > 2) {
+    return 'start';
+  }
+  return 'middle';
+}
+
+function candidateFromOffset(point: { x: number; y: number }, offsetX: number, offsetY: number): TextCandidate {
+  const anchor = anchorForOffset(offsetX);
+  const y =
+    offsetY > 2
+      ? point.y + offsetY + LABEL_FONT_SIZE
+      : offsetY < -2
+        ? point.y + offsetY
+        : point.y + LABEL_FONT_SIZE * 0.35;
+
+  return {
+    x: point.x + offsetX,
+    y,
+    anchor,
+  };
+}
+
+function uniqueCandidates(candidates: TextCandidate[]): TextCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = `${candidate.x.toFixed(2)}:${candidate.y.toFixed(2)}:${candidate.anchor}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function tryPlaceText(text: string, candidates: TextCandidate[], occupied: TextBox[]): PlacedText | null {
+  for (const candidate of candidates) {
+    const box = estimateTextBox(text, candidate.x, candidate.y, candidate.anchor);
+    if (boxFitsSvg(box) && !occupied.some((existing) => boxesOverlap(box, existing))) {
+      occupied.push(box);
+      return {
+        ...candidate,
+        text,
+        box,
+      };
+    }
+  }
+
+  return null;
+}
+
+function componentLabelCandidates(point: { x: number; y: number }, center: { x: number; y: number }): TextCandidate[] {
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  const distance = Math.hypot(dx, dy);
+  const outward = distance > 1e-6 ? { x: dx / distance, y: dy / distance } : { x: 1, y: -1 };
+  const radialGap = 16;
+  const radial = candidateFromOffset(point, outward.x * radialGap, outward.y * radialGap);
+  const fallbacks = [
+    candidateFromOffset(point, 18, -10),
+    candidateFromOffset(point, -18, -10),
+    candidateFromOffset(point, 18, 8),
+    candidateFromOffset(point, -18, 8),
+    candidateFromOffset(point, 0, -18),
+    candidateFromOffset(point, 0, 18),
+    candidateFromOffset(point, 28, 0),
+    candidateFromOffset(point, -28, 0),
+    candidateFromOffset(point, 24, -24),
+    candidateFromOffset(point, -24, -24),
+    candidateFromOffset(point, 24, 24),
+    candidateFromOffset(point, -24, 24),
+    candidateFromOffset(point, 0, -34),
+    candidateFromOffset(point, 0, 34),
+  ];
+
+  return uniqueCandidates([radial, ...fallbacks]);
+}
+
+function xAxisLabelCandidates(point: { x: number; y: number }): TextCandidate[] {
+  return [
+    candidateFromOffset(point, -10, -10),
+    candidateFromOffset(point, -10, 10),
+    candidateFromOffset(point, 10, -10),
+    candidateFromOffset(point, 10, 10),
+    candidateFromOffset(point, -34, -10),
+    candidateFromOffset(point, 0, -24),
+    candidateFromOffset(point, 0, 24),
+  ];
+}
+
+function yAxisLabelCandidates(point: { x: number; y: number }, yDown: boolean): TextCandidate[] {
+  const preferred = yDown
+    ? [candidateFromOffset(point, -10, 14), candidateFromOffset(point, 10, 14)]
+    : [candidateFromOffset(point, -10, -10), candidateFromOffset(point, 10, -10)];
+  const fallback = yDown
+    ? [
+        candidateFromOffset(point, -10, -10),
+        candidateFromOffset(point, 10, -10),
+        candidateFromOffset(point, 0, -24),
+        candidateFromOffset(point, 0, 24),
+      ]
+    : [
+        candidateFromOffset(point, -10, 14),
+        candidateFromOffset(point, 10, 14),
+        candidateFromOffset(point, 0, 24),
+        candidateFromOffset(point, 0, -24),
+      ];
+
+  return uniqueCandidates([...preferred, ...fallback]);
+}
+
+function renderText(className: string, placed: PlacedText): string {
+  const anchorAttribute = placed.anchor === 'start' ? '' : ` text-anchor="${placed.anchor}"`;
+  return `<text class="${className}" x="${placed.x.toFixed(2)}" y="${placed.y.toFixed(2)}"${anchorAttribute}>${escapeXml(placed.text)}</text>`;
+}
+
 export function buildPreviewSvg(
   placements: Placement[],
   settings: PlacementSettings,
@@ -80,8 +254,13 @@ export function buildPreviewSvg(
   const axisEndX = project(maxX, 0);
   const axisStartY = project(0, minY);
   const axisEndY = project(0, maxY);
-  const yAxisLabelX = axisEndY.x - 10;
-  const yAxisLabelY = yDown ? Math.min(SVG_SIZE - 12, axisEndY.y + 22) : Math.max(16, axisEndY.y - 14);
+  const occupiedLabelBoxes: TextBox[] = [];
+  const xAxisLabel = showAxes ? tryPlaceText('+X', xAxisLabelCandidates(axisEndX), occupiedLabelBoxes) : null;
+  const yAxisLabel = showAxes ? tryPlaceText('+Y output', yAxisLabelCandidates(axisEndY, yDown), occupiedLabelBoxes) : null;
+  const axisLabelMarkup = [xAxisLabel, yAxisLabel]
+    .filter((label): label is PlacedText => label !== null)
+    .map((label) => renderText('svg-axis-label', label))
+    .join('');
 
   const pointMarkup = placements
     .map((placement) => {
@@ -92,9 +271,10 @@ export function buildPreviewSvg(
         x: origin.x + rotationVector.x,
         y: origin.y + (yDown ? rotationVector.y : -rotationVector.y),
       };
-      const label = showLabels
-        ? `<text x="${targetCenter.x + 8}" y="${targetCenter.y - 8}" class="svg-label">${escapeXml(placement.ref)}</text>`
-        : '';
+      const placedLabel = showLabels
+        ? tryPlaceText(placement.ref, componentLabelCandidates(targetCenter, center), occupiedLabelBoxes)
+        : null;
+      const label = placedLabel ? renderText('svg-label', placedLabel) : '';
       const offsetMarkup =
         Math.hypot(placement.appliedOffsetX, placement.appliedOffsetY) > 1e-9
           ? `<line class="svg-offset" x1="${origin.x}" y1="${origin.y}" x2="${targetCenter.x}" y2="${targetCenter.y}"/><rect class="svg-origin" x="${origin.x - 4}" y="${origin.y - 4}" width="8" height="8" rx="1"/>`
@@ -104,7 +284,7 @@ export function buildPreviewSvg(
     .join('');
 
   const axisMarkup = showAxes
-    ? `<line class="svg-axis" x1="${axisStartX.x}" y1="${axisStartX.y}" x2="${axisEndX.x}" y2="${axisEndX.y}"/><line class="svg-axis" x1="${axisStartY.x}" y1="${axisStartY.y}" x2="${axisEndY.x}" y2="${axisEndY.y}"/><text class="svg-axis-label" x="${axisEndX.x - 18}" y="${axisEndX.y - 8}">+X</text><text class="svg-axis-label" x="${yAxisLabelX}" y="${yAxisLabelY}" text-anchor="end">+Y output</text>`
+    ? `<line class="svg-axis" x1="${axisStartX.x}" y1="${axisStartX.y}" x2="${axisEndX.x}" y2="${axisEndX.y}"/><line class="svg-axis" x1="${axisStartY.x}" y1="${axisStartY.y}" x2="${axisEndY.x}" y2="${axisEndY.y}"/>${axisLabelMarkup}`
     : '';
 
   const boardMarkup =
