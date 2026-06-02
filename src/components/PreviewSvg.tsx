@@ -181,8 +181,8 @@ export function PreviewSvg({
           <input type="checkbox" checked={showAxes} onChange={(event) => onShowAxesChange(event.target.checked)} />
           {text.axes}
         </label>
-        <label>
-          {text.boardOutlineRadius}
+        <label className="input-field preview-radius-field">
+          <span className="field-label">{text.boardOutlineRadius}</span>
           <input
             type="text"
             inputMode="decimal"
@@ -191,15 +191,17 @@ export function PreviewSvg({
             aria-invalid={boardRadiusInvalid ? 'true' : undefined}
             onChange={(event) => updateBoardRadius(event.target.value)}
           />
-          {parsedBoardRadius.ok && parsedBoardRadius.isExpression ? (
-            <span className="field-evaluation">= {parsedBoardRadius.value}</span>
-          ) : null}
-          {boardRadiusInvalid ? (
-            <span className="field-error">
-              {boardRadiusError ??
-                (!parsedBoardRadius.ok ? translateExpressionError(parsedBoardRadius.error, language) : '')}
-            </span>
-          ) : null}
+          <span className="field-meta" aria-live="polite">
+            {parsedBoardRadius.ok && parsedBoardRadius.isExpression ? (
+              <span className="field-evaluation">= {parsedBoardRadius.value}</span>
+            ) : null}
+            {boardRadiusInvalid ? (
+              <span className="field-error">
+                {boardRadiusError ??
+                  (!parsedBoardRadius.ok ? translateExpressionError(parsedBoardRadius.error, language) : '')}
+              </span>
+            ) : null}
+          </span>
         </label>
       </div>
       <div className="svg-frame" dangerouslySetInnerHTML={{ __html: svgMarkup }} />

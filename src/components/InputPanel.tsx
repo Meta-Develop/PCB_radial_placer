@@ -63,6 +63,19 @@ function NumericExpressionInput({
   const parsed = parseNumericExpression(rawValue);
   const showResult = parsed.ok && parsed.isExpression;
   const invalid = !parsed.ok;
+  const metadata = [
+    help ? <span className="field-help" key="help">{help}</span> : null,
+    showResult ? (
+      <span className="field-evaluation" key="evaluation">
+        = {formatResolvedNumber(parsed.value)}
+      </span>
+    ) : null,
+    invalid ? (
+      <span className="field-error" key="error">
+        {translateExpressionError(parsed.error, language)}
+      </span>
+    ) : null,
+  ].filter(Boolean);
 
   const updateRawValue = (value: string) => {
     const nextExpressions = { ...settings.inputExpressions };
@@ -84,8 +97,8 @@ function NumericExpressionInput({
   };
 
   return (
-    <label>
-      {label}
+    <label className="input-field">
+      <span className="field-label">{label}</span>
       <input
         type="text"
         inputMode="decimal"
@@ -95,9 +108,9 @@ function NumericExpressionInput({
         aria-invalid={invalid ? 'true' : undefined}
         onChange={(event) => updateRawValue(event.target.value)}
       />
-      {help ? <span className="field-help">{help}</span> : null}
-      {showResult ? <span className="field-evaluation">= {formatResolvedNumber(parsed.value)}</span> : null}
-      {invalid ? <span className="field-error">{translateExpressionError(parsed.error, language)}</span> : null}
+      <span className="field-meta" aria-live="polite">
+        {metadata}
+      </span>
     </label>
   );
 }
