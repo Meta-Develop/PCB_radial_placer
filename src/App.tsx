@@ -92,7 +92,7 @@ export function App() {
         <div className="header-right">
           <nav className="header-links" aria-label={text.header.linksLabel}>
             <a
-              href="https://github.com/Meta-Develop"
+              href="https://github.com/Meta-Develop/PCB_radial_placer"
               target="_blank"
               rel="noopener noreferrer"
               aria-label={text.header.github}
