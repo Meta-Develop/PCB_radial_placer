@@ -29,7 +29,12 @@ export function PresetPanel({ settings, presets, onPresetsChange, onLoadSettings
       setStatus(text.nameRequired);
       return;
     }
-    onPresetsChange(savePresetRecord(trimmedName, settings));
+    const result = savePresetRecord(trimmedName, settings);
+    if (!result.saved) {
+      setStatus(text.saveFailed);
+      return;
+    }
+    onPresetsChange(result.records);
     setStatus(text.saved(trimmedName));
   };
 

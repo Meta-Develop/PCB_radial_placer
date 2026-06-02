@@ -4,8 +4,42 @@ import { normalizePlacementSettings, extractSettingsPayload } from './settings';
 export const PRESETS_STORAGE_KEY = 'pcb-radial-placer:presets:v1';
 export const RECENT_SETTINGS_STORAGE_KEY = 'pcb-radial-placer:recent-settings:v1';
 
-function hasLocalStorage(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+export interface SavePresetRecordResult {
+  records: PresetRecord[];
+  saved: boolean;
+}
+
+function browserLocalStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readStorageItem(key: string): string | null {
+  try {
+    return browserLocalStorage()?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStorageItem(key: string, value: string): boolean {
+  try {
+    const storage = browserLocalStorage();
+    if (!storage) {
+      return false;
+    }
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function createPresetId(): string {
@@ -17,11 +51,7 @@ function createPresetId(): string {
 }
 
 export function loadPresetRecords(): PresetRecord[] {
-  if (!hasLocalStorage()) {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(PRESETS_STORAGE_KEY);
+  const raw = readStorageItem(PRESETS_STORAGE_KEY);
   if (!raw) {
     return [];
   }
@@ -55,14 +85,11 @@ export function loadPresetRecords(): PresetRecord[] {
   }
 }
 
-export function storePresetRecords(records: PresetRecord[]): void {
-  if (!hasLocalStorage()) {
-    return;
-  }
-  window.localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(records));
+export function storePresetRecords(records: PresetRecord[]): boolean {
+  return writeStorageItem(PRESETS_STORAGE_KEY, JSON.stringify(records));
 }
 
-export function savePresetRecord(name: string, settings: PlacementSettings): PresetRecord[] {
+export function savePresetRecord(name: string, settings: PlacementSettings): SavePresetRecordResult {
   const records = loadPresetRecords();
   const trimmedName = name.trim();
   const existingIndex = records.findIndex((record) => record.name === trimmedName);
@@ -79,22 +106,20 @@ export function savePresetRecord(name: string, settings: PlacementSettings): Pre
     records.push(record);
   }
 
-  storePresetRecords(records);
-  return records;
+  if (!storePresetRecords(records)) {
+    return { records: loadPresetRecords(), saved: false };
+  }
+  return { records, saved: true };
 }
 
 export function deletePresetRecord(id: string): PresetRecord[] {
-  const next = loadPresetRecords().filter((record) => record.id !== id);
-  storePresetRecords(next);
-  return next;
+  const records = loadPresetRecords();
+  const next = records.filter((record) => record.id !== id);
+  return storePresetRecords(next) ? next : records;
 }
 
 export function loadRecentSettings(): PlacementSettings | null {
-  if (!hasLocalStorage()) {
-    return null;
-  }
-
-  const raw = window.localStorage.getItem(RECENT_SETTINGS_STORAGE_KEY);
+  const raw = readStorageItem(RECENT_SETTINGS_STORAGE_KEY);
   if (!raw) {
     return null;
   }
@@ -106,11 +131,8 @@ export function loadRecentSettings(): PlacementSettings | null {
   }
 }
 
-export function storeRecentSettings(settings: PlacementSettings): void {
-  if (!hasLocalStorage()) {
-    return;
-  }
-  window.localStorage.setItem(RECENT_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+export function storeRecentSettings(settings: PlacementSettings): boolean {
+  return writeStorageItem(RECENT_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }
 
 export function parsePresetImport(rawJson: string): PlacementSettings {

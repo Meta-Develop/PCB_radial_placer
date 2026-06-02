@@ -17,7 +17,7 @@ import type { PlacementSettings, PresetRecord } from './types';
 import './styles.css';
 import { normalizePlacementSettings } from './core/settings';
 
-const LANGUAGE_STORAGE_KEY = 'pcb-radial-placer:language:v1';
+export const LANGUAGE_STORAGE_KEY = 'pcb-radial-placer:language:v1';
 
 function GitHubIcon() {
   return (
@@ -41,12 +41,32 @@ function XIcon() {
   );
 }
 
-function loadLanguage(): Language {
+function browserLocalStorage(): Storage | null {
   if (typeof window === 'undefined') {
-    return 'en';
+    return null;
   }
 
-  return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) === 'ja' ? 'ja' : 'en';
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function loadLanguage(): Language {
+  try {
+    return browserLocalStorage()?.getItem(LANGUAGE_STORAGE_KEY) === 'ja' ? 'ja' : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+export function storeLanguage(language: Language): void {
+  try {
+    browserLocalStorage()?.setItem(LANGUAGE_STORAGE_KEY, language);
+  } catch {
+    // localStorage may be unavailable in private mode, sandboxed iframes, or locked-down profiles.
+  }
 }
 
 export function App() {
@@ -63,7 +83,7 @@ export function App() {
   }, [settings]);
 
   useEffect(() => {
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    storeLanguage(language);
   }, [language]);
 
   const validation = useMemo(() => validateSettings(settings), [settings]);

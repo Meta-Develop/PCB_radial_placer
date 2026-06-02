@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../core/defaults';
+import { MAX_COMPONENT_COUNT } from '../core/limits';
 import { validateSettings } from '../core/validation';
 
 const hasField = (result: ReturnType<typeof validateSettings>, field: string): boolean =>
   result.messages.some((message) => message.field === field);
+const hasWarningMessage = (result: ReturnType<typeof validateSettings>, message: string): boolean =>
+  result.messages.some((entry) => entry.severity === 'warning' && entry.message === message);
+
+const DUPLICATE_TARGET_WARNING =
+  'Generated placements include duplicate target coordinates; check angle spacing and count.';
 
 describe('validateSettings', () => {
   it('rejects invalid core inputs', () => {
@@ -33,11 +39,85 @@ describe('validateSettings', () => {
     expect(hasField(result, 'significantDigits')).toBe(true);
   });
 
+  it('rejects negative custom step angles because Direction controls the sign', () => {
+    const result = validateSettings({
+      ...DEFAULT_SETTINGS,
+      angleMode: 'customStep',
+      stepAngleDeg: -45,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(
+      result.messages.some(
+        (message) =>
+          message.field === 'stepAngleDeg' &&
+          message.message === 'Step angle must be non-negative; Direction controls the sign.',
+      ),
+    ).toBe(true);
+  });
+
+  it('caps component count while allowing the configured maximum', () => {
+    const atLimit = validateSettings({
+      ...DEFAULT_SETTINGS,
+      count: MAX_COMPONENT_COUNT,
+      radius: 1000,
+    });
+    const overLimit = validateSettings({
+      ...DEFAULT_SETTINGS,
+      count: MAX_COMPONENT_COUNT + 1,
+      radius: 1000,
+    });
+
+    expect(atLimit.valid).toBe(true);
+    expect(overLimit.valid).toBe(false);
+    expect(hasField(overLimit, 'count')).toBe(true);
+  });
+
   it('warns about duplicate coordinates with zero radius', () => {
     const result = validateSettings({ ...DEFAULT_SETTINGS, count: 4, radius: 0 });
 
     expect(result.valid).toBe(true);
     expect(result.messages.some((message) => message.severity === 'warning')).toBe(true);
+  });
+
+  it('warns when a custom 360 degree step duplicates target centers', () => {
+    const result = validateSettings({
+      ...DEFAULT_SETTINGS,
+      count: 3,
+      angleMode: 'customStep',
+      stepAngleDeg: 360,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(hasWarningMessage(result, DUPLICATE_TARGET_WARNING)).toBe(true);
+  });
+
+  it('warns when an included arc endpoint is coterminal with the start', () => {
+    const result = validateSettings({
+      ...DEFAULT_SETTINGS,
+      count: 5,
+      angleMode: 'arc',
+      startAngleDeg: 0,
+      endAngleDeg: 360,
+      includeEndpoint: true,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(hasWarningMessage(result, DUPLICATE_TARGET_WARNING)).toBe(true);
+  });
+
+  it('warns when individual angles repeat or are coterminal', () => {
+    for (const individualAnglesText of ['0, 360', '45, 45']) {
+      const result = validateSettings({
+        ...DEFAULT_SETTINGS,
+        count: 2,
+        angleMode: 'individualAngles',
+        individualAnglesText,
+      });
+
+      expect(result.valid).toBe(true);
+      expect(hasWarningMessage(result, DUPLICATE_TARGET_WARNING)).toBe(true);
+    }
   });
 
   it('requires two points for arc endpoint mode', () => {

@@ -24,6 +24,26 @@ describe('DistributionGraph', () => {
     expect(doc.querySelectorAll('.graph-angle-dot')).toHaveLength(5);
   });
 
+  it('escapes placement refs before injecting graph SVG markup', () => {
+    const maliciousPrefix = '</title><image onerror="alert(1)"><script>alert(2)</script>';
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      count: 1,
+      reference: {
+        ...DEFAULT_SETTINGS.reference,
+        prefix: maliciousPrefix,
+      },
+    };
+    const svg = buildDistributionGraphSvg(calculatePlacements(settings), settings);
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+
+    expect(svg).not.toContain('<image');
+    expect(svg).not.toContain('<script');
+    expect(doc.querySelector('image')).toBeNull();
+    expect(doc.querySelector('script')).toBeNull();
+    expect(doc.querySelector('title')?.textContent).toContain(maliciousPrefix);
+  });
+
   it('keeps derived spacing finite for individual angle mode', () => {
     const settings = {
       ...DEFAULT_SETTINGS,

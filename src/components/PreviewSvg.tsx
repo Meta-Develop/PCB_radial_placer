@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Placement, PlacementSettings } from '../types';
 import { downloadTextFile } from '../core/download';
 import { parseNumericExpression } from '../core/expression';
@@ -137,7 +137,10 @@ export function PreviewSvg({
   language,
   text,
 }: PreviewSvgProps) {
-  const svgMarkup = buildPreviewSvg(placements, settings, showLabels, showAxes, boardOutlineRadius);
+  const svgMarkup = useMemo(
+    () => buildPreviewSvg(placements, settings, showLabels, showAxes, boardOutlineRadius),
+    [boardOutlineRadius, placements, settings, showAxes, showLabels],
+  );
   const [boardRadiusText, setBoardRadiusText] = useState(String(boardOutlineRadius));
   const parsedBoardRadius = parseNumericExpression(boardRadiusText);
   const boardRadiusError =

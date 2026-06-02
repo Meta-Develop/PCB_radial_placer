@@ -115,6 +115,7 @@ const en = {
     importButton: 'Import JSON',
     nameRequired: 'Preset name is required.',
     saved: (name: string) => `Saved ${name}.`,
+    saveFailed: 'Could not save preset in this browser profile.',
     imported: 'Imported preset settings.',
     importFailed: 'Import failed. Paste a settings or preset JSON object.',
   },
@@ -158,6 +159,8 @@ const en = {
     rowsSummary: (count: number, unit: string) => `${count} rows, ${unit}`,
     unitlessCoordinates: 'unitless coordinates',
     copyTsv: 'Copy TSV',
+    copySucceeded: 'Copied TSV to clipboard.',
+    copyFailed: 'Clipboard copy failed. Use the TSV download instead.',
     csv: 'CSV',
     tsv: 'TSV',
     json: 'JSON',
@@ -312,6 +315,7 @@ const ja: UiText = {
     importButton: 'JSON取り込み',
     nameRequired: 'プリセット名が必要です。',
     saved: (name: string) => `${name} を保存しました。`,
+    saveFailed: 'このブラウザプロファイルではプリセットを保存できませんでした。',
     imported: 'プリセット設定を取り込みました。',
     importFailed: '取り込みに失敗しました。設定またはプリセットのJSONオブジェクトを貼り付けてください。',
   },
@@ -355,6 +359,8 @@ const ja: UiText = {
     rowsSummary: (count: number, unit: string) => `${count}行、${unit}`,
     unitlessCoordinates: '単位なし座標',
     copyTsv: 'TSVをコピー',
+    copySucceeded: 'TSVをクリップボードにコピーしました。',
+    copyFailed: 'クリップボードへのコピーに失敗しました。TSVダウンロードを使用してください。',
     csv: 'CSV',
     tsv: 'TSV',
     json: 'JSON',
@@ -399,6 +405,7 @@ export const UI_TEXT: Record<Language, UiText> = { en, ja };
 
 const validationMessageJa: Record<string, string> = {
   'Count must be a positive integer.': '個数は正の整数にしてください。',
+  'Count must be 2000 or less.': '個数は2000以下にしてください。',
   'Radius must be a finite non-negative number.': '半径は有限の0以上の数値にしてください。',
   'Center X must be a finite number.': '中心Xは有限の数値にしてください。',
   'Center Y must be a finite number.': '中心Yは有限の数値にしてください。',
@@ -406,6 +413,8 @@ const validationMessageJa: Record<string, string> = {
   'Start angle offset must be a finite number.': '開始角度オフセットは有限の数値にしてください。',
   'Arc end angle must be a finite number.': '円弧終端角度は有限の数値にしてください。',
   'Step angle must be a finite number.': 'ステップ角度は有限の数値にしてください。',
+  'Step angle must be non-negative; Direction controls the sign.':
+    'ステップ角度は0以上にしてください。方向が符号を制御します。',
   'Decimal places must be an integer from 0 to 9.': '小数点以下桁数は0から9の整数にしてください。',
   'Significant digits must be an integer from 1 to 12.': '有効桁数は1から12の整数にしてください。',
   'Reference start number must be an integer.': 'リファレンス開始番号は整数にしてください。',
@@ -428,6 +437,8 @@ const validationMessageJa: Record<string, string> = {
     '半径が0のため、複数の部品が同じ座標になります。',
   'Step angle is effectively 0, so duplicate coordinates are likely.':
     'ステップ角度が実質0のため、重複座標になる可能性があります。',
+  'Generated placements include duplicate target coordinates; check angle spacing and count.':
+    '生成された配置に重複する目標座標があります。角度間隔と個数を確認してください。',
   'Adjacent chord length is below 0.1 selected units; check package clearance.':
     '隣接する弦長が選択単位で0.1未満です。部品クリアランスを確認してください。',
 };

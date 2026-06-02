@@ -2,7 +2,11 @@ import type { NumericExpressionField, PlacementSettings, ValidationMessage, Vali
 import { calculateDerivedGeometry, calculateStepAngle } from './geometry';
 import { parseIndividualAngles } from './individualAngles';
 import { parseNumericExpression } from './expression';
+import { MAX_COMPONENT_COUNT } from './limits';
 import { NUMERIC_EXPRESSION_FIELDS } from './numericFields';
+import { calculatePlacements } from './placement';
+
+const DUPLICATE_CENTER_EPSILON = 1e-9;
 
 function finiteNumber(value: number): boolean {
   return typeof value === 'number' && Number.isFinite(value);
@@ -46,11 +50,47 @@ function isNumericFieldRelevant(settings: PlacementSettings, field: NumericExpre
   }
 }
 
+function duplicateCenterWarningField(settings: PlacementSettings): string {
+  switch (settings.angleMode) {
+    case 'individualAngles':
+      return 'individualAnglesText';
+    case 'arc':
+      return 'endAngleDeg';
+    case 'customStep':
+      return 'stepAngleDeg';
+    default:
+      return 'radius';
+  }
+}
+
+function hasDuplicateTargetCenters(settings: PlacementSettings): boolean {
+  const placements = calculatePlacements(settings);
+  const epsilonSquared = DUPLICATE_CENTER_EPSILON ** 2;
+
+  for (let currentIndex = 0; currentIndex < placements.length; currentIndex += 1) {
+    const current = placements[currentIndex];
+
+    for (let previousIndex = 0; previousIndex < currentIndex; previousIndex += 1) {
+      const previous = placements[previousIndex];
+      const dx = current.targetCenterX - previous.targetCenterX;
+      const dy = current.targetCenterY - previous.targetCenterY;
+
+      if (dx * dx + dy * dy <= epsilonSquared) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export function validateSettings(settings: PlacementSettings): ValidationResult {
   const messages: ValidationMessage[] = [];
 
   if (!Number.isInteger(settings.count) || settings.count <= 0) {
     add(messages, 'error', 'count', 'Count must be a positive integer.');
+  } else if (settings.count > MAX_COMPONENT_COUNT) {
+    add(messages, 'error', 'count', `Count must be ${MAX_COMPONENT_COUNT} or less.`);
   }
 
   if (!finiteNumber(settings.radius) || settings.radius < 0) {
@@ -79,6 +119,14 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
 
   if (isNumericFieldRelevant(settings, 'stepAngleDeg') && !finiteNumber(settings.stepAngleDeg)) {
     add(messages, 'error', 'stepAngleDeg', 'Step angle must be a finite number.');
+  }
+
+  if (
+    isNumericFieldRelevant(settings, 'stepAngleDeg') &&
+    finiteNumber(settings.stepAngleDeg) &&
+    settings.stepAngleDeg < 0
+  ) {
+    add(messages, 'error', 'stepAngleDeg', 'Step angle must be non-negative; Direction controls the sign.');
   }
 
   if (
@@ -184,6 +232,15 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
         'warning',
         settings.angleMode === 'individualAngles' ? 'individualAnglesText' : 'stepAngleDeg',
         'Step angle is effectively 0, so duplicate coordinates are likely.',
+      );
+    }
+
+    if (settings.count > 1 && hasDuplicateTargetCenters(settings)) {
+      add(
+        messages,
+        'warning',
+        duplicateCenterWarningField(settings),
+        'Generated placements include duplicate target coordinates; check angle spacing and count.',
       );
     }
 

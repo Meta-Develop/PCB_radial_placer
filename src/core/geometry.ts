@@ -52,7 +52,7 @@ export function calculateStepAngle(settings: PlacementSettings): number {
   }
 
   if (settings.angleMode === 'customStep') {
-    return sign * settings.stepAngleDeg;
+    return sign * Math.abs(settings.stepAngleDeg);
   }
 
   const denominator = settings.includeEndpoint ? settings.count - 1 : settings.count;
