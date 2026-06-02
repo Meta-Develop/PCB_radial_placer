@@ -11,7 +11,7 @@ const en = {
   header: {
     subtitle: 'Static coordinate calculator for radial ECAD placement tables.',
     linksLabel: 'Project links',
-    github: 'GitHub profile',
+    github: 'GitHub repository',
     x: 'X profile',
     factsLabel: 'Current coordinate convention',
     zeroDeg: '0 deg = +X',
@@ -208,7 +208,7 @@ const ja: UiText = {
   header: {
     subtitle: 'ラジアル配置用のECAD座標テーブルを計算する静的ツールです。',
     linksLabel: 'プロジェクトリンク',
-    github: 'GitHubプロフィール',
+    github: 'GitHubリポジトリ',
     x: 'Xプロフィール',
     factsLabel: '現在の座標規約',
     zeroDeg: '0度 = +X',
