@@ -38,6 +38,10 @@ const en = {
     stepAngle: 'Step angle',
     arcEndAngle: 'Arc end angle',
     arcEndHelp: 'Only used in Arc mode; it is the target endpoint of the arc.',
+    individualAngles: 'Individual angles',
+    individualAnglesHelp:
+      'One angle per component. Commas, semicolons, or newlines are accepted; values support arithmetic expressions. Entry count must match Count.',
+    notUsedInIndividualAngles: 'Not used in Individual angles mode.',
     includeArcEndpoint: 'Include arc endpoint',
     referenceDesignators: 'Reference Designators',
     prefix: 'Prefix',
@@ -75,6 +79,7 @@ const en = {
       fullCircle: 'Full circle: 360 / count',
       customStep: 'Custom step',
       arc: 'Arc between effective start and end',
+      individualAngles: 'Individual angles',
     },
     rotationOptions: {
       fixed: 'Fixed',
@@ -179,6 +184,8 @@ const en = {
       'Center offset is applied as (centerX, centerY). Zero degrees points along +X. Angles are in degrees. Direction controls the sign of the angular step.',
     arc:
       'Arc end angle is only used in Arc mode. Start angle offset is added to start angle first, so the effective first angle is startAngle + startAngleOffset. In endpoint mode the directed arc targets the arc end angle.',
+    individualAngles:
+      'Individual angles mode uses the listed angle for each component index. Start angle, offset, step, end angle, direction, and endpoint settings do not modify those manual angles.',
     expressions:
       'Numeric fields accept arithmetic such as 2.54/2, 10 + 1.27, parentheses, unary signs, multiplication, and division. Invalid expressions block placement output instead of falling back to zero.',
     offset:
@@ -227,6 +234,10 @@ const ja: UiText = {
     stepAngle: 'ステップ角度',
     arcEndAngle: '円弧終端角度',
     arcEndHelp: 'Arcモードだけで使います。円弧の目標終点です。',
+    individualAngles: '個別角度',
+    individualAnglesHelp:
+      '部品1個につき1つの角度を指定します。カンマ、セミコロン、改行で区切れます。値には数式を使えます。項目数は個数と一致させてください。',
+    notUsedInIndividualAngles: '個別角度モードでは使いません。',
     includeArcEndpoint: '円弧の終点を含める',
     referenceDesignators: 'リファレンス',
     prefix: '接頭辞',
@@ -264,6 +275,7 @@ const ja: UiText = {
       fullCircle: '全周: 360 / 個数',
       customStep: 'カスタムステップ',
       arc: '有効開始角度から終端角度までの円弧',
+      individualAngles: '個別角度',
     },
     rotationOptions: {
       fixed: '固定',
@@ -368,6 +380,8 @@ const ja: UiText = {
       '中心オフセットは (centerX, centerY) として適用されます。0度は+X方向です。角度は度数です。方向は角度ステップの符号を制御します。',
     arc:
       '円弧終端角度はArcモードだけで使います。開始角度オフセットを開始角度へ先に加算するため、有効な最初の角度は startAngle + startAngleOffset です。終点を含める場合、選択した方向で円弧終端角度を目標にします。',
+    individualAngles:
+      '個別角度モードでは、各部品インデックスに対してリスト内の角度をそのまま使います。開始角度、オフセット、ステップ、終端角度、方向、終点設定は手入力角度を変更しません。',
     expressions:
       '数値フィールドでは 2.54/2、10 + 1.27、括弧、単項符号、乗算、除算を使えます。無効な式は0へ丸めず、配置出力をブロックします。',
     offset:
@@ -402,6 +416,12 @@ const validationMessageJa: Record<string, string> = {
   'Component local offset Y must be a finite number.': '部品ローカルオフセットYは有限の数値にしてください。',
   'Arc mode with endpoint included requires count of at least 2.':
     '終点を含むArcモードでは、個数を2以上にしてください。',
+  'Individual angles must contain one angle per component.':
+    '個別角度は部品1個につき1つ指定してください。',
+  'Individual angles must not contain empty list items.':
+    '個別角度に空の項目を含めないでください。',
+  'Individual angle entry count must match Count.':
+    '個別角度の項目数は個数と一致させてください。',
   'Radius is 0, so multiple components will share one coordinate.':
     '半径が0のため、複数の部品が同じ座標になります。',
   'Step angle is effectively 0, so duplicate coordinates are likely.':
@@ -433,10 +453,14 @@ export function translateExpressionError(error: string, language: Language): str
   return expressionErrorJa[error] ?? error;
 }
 
-export function translateValidationMessage(message: ValidationMessage, language: Language): string {
+export function translateValidationText(message: string, language: Language): string {
   if (language === 'en') {
-    return message.message;
+    return message;
   }
 
-  return validationMessageJa[message.message] ?? translateExpressionError(message.message, language);
+  return validationMessageJa[message] ?? translateExpressionError(message, language);
+}
+
+export function translateValidationMessage(message: ValidationMessage, language: Language): string {
+  return translateValidationText(message.message, language);
 }

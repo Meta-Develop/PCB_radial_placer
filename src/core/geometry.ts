@@ -1,4 +1,5 @@
 import type { CoordinateSystem, DerivedGeometry, PlacementSettings, Point } from '../types';
+import { parseIndividualAngles, representativeIndividualStep } from './individualAngles';
 
 export function degreesToRadians(angleDeg: number): number {
   return (angleDeg * Math.PI) / 180;
@@ -34,6 +35,14 @@ export function calculateDirectedArcSpan(settings: PlacementSettings): number {
 export function calculateStepAngle(settings: PlacementSettings): number {
   if (!Number.isFinite(settings.count) || settings.count <= 0) {
     return Number.NaN;
+  }
+
+  if (settings.angleMode === 'individualAngles') {
+    const parsed = parseIndividualAngles(settings.individualAnglesText);
+    if (parsed.errors.length > 0 || parsed.angles.length !== settings.count) {
+      return 0;
+    }
+    return representativeIndividualStep(parsed.angles);
   }
 
   const sign = directionSign(settings.direction);

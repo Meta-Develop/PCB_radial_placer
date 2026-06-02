@@ -1,5 +1,6 @@
 import type { Placement, PlacementSettings } from '../types';
 import { calculateStepAngle, effectiveStartAngleDeg, polarToCartesian, rotateLocalOffset } from './geometry';
+import { parseIndividualAngles } from './individualAngles';
 import { calculateRotation } from './rotation';
 
 export function generateReference(index: number, settings: PlacementSettings['reference']): string {
@@ -18,9 +19,18 @@ export function calculatePlacements(settings: PlacementSettings): Placement[] {
   }
 
   const firstAngleDeg = effectiveStartAngleDeg(settings);
+  const individualAngles =
+    settings.angleMode === 'individualAngles' ? parseIndividualAngles(settings.individualAnglesText) : null;
+
+  if (
+    individualAngles &&
+    (individualAngles.errors.length > 0 || individualAngles.angles.length !== count)
+  ) {
+    return [];
+  }
 
   return Array.from({ length: count }, (_, index) => {
-    const angleDeg = firstAngleDeg + index * stepAngleDeg;
+    const angleDeg = individualAngles ? individualAngles.angles[index] : firstAngleDeg + index * stepAngleDeg;
     const targetCenter = polarToCartesian(
       settings.radius,
       angleDeg,

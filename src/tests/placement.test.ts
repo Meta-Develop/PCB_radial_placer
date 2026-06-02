@@ -119,6 +119,42 @@ describe('calculatePlacements', () => {
     expect(placements.map((placement) => placement.angleDeg)).toEqual([0, 90, 180, 270]);
   });
 
+  it('uses one manually specified angle per component in individual angle mode', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 4,
+        radius: 10,
+        angleMode: 'individualAngles',
+        individualAnglesText: '0, 45; 180\n270',
+        startAngleDeg: 90,
+        startAngleOffsetDeg: 15,
+        stepAngleDeg: 30,
+        endAngleDeg: 120,
+        direction: 'clockwise',
+        includeEndpoint: false,
+      }),
+    );
+
+    expect(placements.map((placement) => placement.angleDeg)).toEqual([0, 45, 180, 270]);
+    closeTo(placements[1].x, Math.sqrt(50));
+    closeTo(placements[1].y, Math.sqrt(50));
+  });
+
+  it('evaluates individual angle expressions before placement and rotation', () => {
+    const placements = calculatePlacements(
+      settings({
+        count: 3,
+        radius: 10,
+        angleMode: 'individualAngles',
+        individualAnglesText: '360/8, (90 + 45), -90',
+        rotation: { ...DEFAULT_SETTINGS.rotation, mode: 'radialOutward', normalize: 'none' },
+      }),
+    );
+
+    expect(placements.map((placement) => placement.angleDeg)).toEqual([45, 135, -90]);
+    expect(placements.map((placement) => placement.rotationDeg)).toEqual([45, 135, -90]);
+  });
+
   it('generates padded reference designators', () => {
     const placements = calculatePlacements(
       settings({ count: 3, reference: { prefix: 'LED', startNumber: 1, padding: 2 } }),

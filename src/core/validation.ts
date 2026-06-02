@@ -1,5 +1,6 @@
 import type { PlacementSettings, ValidationMessage, ValidationResult } from '../types';
 import { calculateDerivedGeometry, calculateStepAngle } from './geometry';
+import { parseIndividualAngles } from './individualAngles';
 import { parseNumericExpression } from './expression';
 import { NUMERIC_EXPRESSION_FIELDS } from './numericFields';
 
@@ -111,6 +112,24 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
     add(messages, 'error', 'includeEndpoint', 'Arc mode with endpoint included requires count of at least 2.');
   }
 
+  if (settings.angleMode === 'individualAngles') {
+    const parsed = parseIndividualAngles(settings.individualAnglesText);
+
+    if (parsed.errors.length > 0) {
+      for (const error of parsed.errors) {
+        add(messages, 'error', 'individualAnglesText', error.message);
+      }
+    }
+
+    if (parsed.angles.length === 0 && parsed.errors.length === 0) {
+      add(messages, 'error', 'individualAnglesText', 'Individual angles must contain one angle per component.');
+    }
+
+    if (parsed.angles.length !== settings.count) {
+      add(messages, 'error', 'individualAnglesText', 'Individual angle entry count must match Count.');
+    }
+  }
+
   const hasErrors = messages.some((message) => message.severity === 'error');
   if (!hasErrors) {
     const stepAngleDeg = calculateStepAngle(settings);
@@ -121,7 +140,12 @@ export function validateSettings(settings: PlacementSettings): ValidationResult 
     }
 
     if (settings.count > 1 && Math.abs(stepAngleDeg) < 1e-9) {
-      add(messages, 'warning', 'stepAngleDeg', 'Step angle is effectively 0, so duplicate coordinates are likely.');
+      add(
+        messages,
+        'warning',
+        settings.angleMode === 'individualAngles' ? 'individualAnglesText' : 'stepAngleDeg',
+        'Step angle is effectively 0, so duplicate coordinates are likely.',
+      );
     }
 
     if (settings.count > 1 && geometry.chordLength > 0 && geometry.chordLength < 0.1) {

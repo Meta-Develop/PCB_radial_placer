@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: PlacementSettings = {
   startAngleOffsetDeg: 0,
   endAngleDeg: 180,
   stepAngleDeg: 45,
+  individualAnglesText: '',
   direction: 'counterclockwise',
   angleMode: 'fullCircle',
   includeEndpoint: true,

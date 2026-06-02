@@ -1,8 +1,9 @@
 import type { ChangeEvent } from 'react';
 import { parseNumericExpression } from '../core/expression';
+import { parseIndividualAngles } from '../core/individualAngles';
 import { getNumericFieldValue, setNumericFieldValue } from '../core/numericFields';
 import type { Language, UiText } from '../i18n';
-import { translateExpressionError } from '../i18n';
+import { translateExpressionError, translateValidationText } from '../i18n';
 import type {
   AngleMode,
   CoordinateSystem,
@@ -116,6 +117,10 @@ function NumericExpressionInput({
 }
 
 export function InputPanel({ settings, onChange, language, text }: InputPanelProps) {
+  const isIndividualAngles = settings.angleMode === 'individualAngles';
+  const individualAngles = parseIndividualAngles(settings.individualAnglesText);
+  const individualAnglesInvalid = isIndividualAngles && individualAngles.errors.length > 0;
+
   const update = <K extends keyof PlacementSettings>(key: K, value: PlacementSettings[K]) => {
     onChange({ ...settings, [key]: value });
   };
@@ -158,11 +163,17 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
         {numericInput('radius', text.radius)}
         {numericInput('centerX', text.centerX)}
         {numericInput('centerY', text.centerY)}
-        {numericInput('startAngleDeg', text.startAngle)}
-        {numericInput('startAngleOffsetDeg', text.startAngleOffset, false, text.startAngleOffsetHelp)}
+        {numericInput('startAngleDeg', text.startAngle, isIndividualAngles, isIndividualAngles ? text.notUsedInIndividualAngles : undefined)}
+        {numericInput(
+          'startAngleOffsetDeg',
+          text.startAngleOffset,
+          isIndividualAngles,
+          isIndividualAngles ? text.notUsedInIndividualAngles : text.startAngleOffsetHelp,
+        )}
         <label>
           {text.direction}
           <select
+            disabled={isIndividualAngles}
             value={settings.direction}
             onChange={(event) => update('direction', event.target.value as Direction)}
           >
@@ -202,10 +213,40 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
             <option value="fullCircle">{text.angleModeOptions.fullCircle}</option>
             <option value="customStep">{text.angleModeOptions.customStep}</option>
             <option value="arc">{text.angleModeOptions.arc}</option>
+            <option value="individualAngles">{text.angleModeOptions.individualAngles}</option>
           </select>
         </label>
-        {numericInput('stepAngleDeg', text.stepAngle, settings.angleMode !== 'customStep')}
-        {numericInput('endAngleDeg', text.arcEndAngle, settings.angleMode !== 'arc', text.arcEndHelp)}
+        {numericInput(
+          'stepAngleDeg',
+          text.stepAngle,
+          settings.angleMode !== 'customStep',
+          isIndividualAngles ? text.notUsedInIndividualAngles : undefined,
+        )}
+        {numericInput(
+          'endAngleDeg',
+          text.arcEndAngle,
+          settings.angleMode !== 'arc',
+          isIndividualAngles ? text.notUsedInIndividualAngles : text.arcEndHelp,
+        )}
+        <label className="field-wide individual-angles-field">
+          <span className="field-label">{text.individualAngles}</span>
+          <textarea
+            rows={3}
+            spellCheck={false}
+            disabled={!isIndividualAngles}
+            value={settings.individualAnglesText}
+            aria-invalid={individualAnglesInvalid ? 'true' : undefined}
+            onChange={(event) => update('individualAnglesText', event.target.value)}
+          />
+          <span className="field-meta" aria-live="polite">
+            <span className="field-help">{text.individualAnglesHelp}</span>
+            {individualAnglesInvalid ? (
+              <span className="field-error">
+                {translateValidationText(individualAngles.errors[0].message, language)}
+              </span>
+            ) : null}
+          </span>
+        </label>
         <label className="inline-control">
           <input
             type="checkbox"

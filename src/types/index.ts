@@ -1,6 +1,6 @@
 export type Direction = 'counterclockwise' | 'clockwise';
 
-export type AngleMode = 'fullCircle' | 'customStep' | 'arc';
+export type AngleMode = 'fullCircle' | 'customStep' | 'arc' | 'individualAngles';
 
 export type CoordinateSystem = 'mathYUp' | 'ecadYDown';
 
@@ -73,6 +73,7 @@ export interface PlacementSettings {
   startAngleOffsetDeg: number;
   endAngleDeg: number;
   stepAngleDeg: number;
+  individualAnglesText: string;
   direction: Direction;
   angleMode: AngleMode;
   includeEndpoint: boolean;
