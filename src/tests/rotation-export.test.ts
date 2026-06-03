@@ -167,6 +167,25 @@ describe('export formatting', () => {
     expect(csv.split('\n')[1]).toBe('D1,0,0,3.33,0,3.33,0,0,0,0,3.33,0,0');
   });
 
+  it('formats cardinal zero coordinates as 0 in significant-digits mode', () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      count: 4,
+      radius: 10,
+    };
+    const csv = formatPlacementsAsCsv(
+      calculatePlacements(settings),
+      exportOptions({ precisionMode: 'significantDigits', significantDigits: 4 }),
+    );
+
+    expect(csv.split('\n').slice(1, 5)).toEqual([
+      'D1,0,0,10.00,0,10.00,0,0,0,0,10.00,0,0',
+      'D2,1,90.00,0,10.00,0,10.00,0,0,90.00,10.00,0,0',
+      'D3,2,180.0,-10.00,0,-10.00,0,0,0,180.0,10.00,0,0',
+      'D4,3,270.0,0,-10.00,0,-10.00,0,0,270.0,10.00,0,0',
+    ]);
+  });
+
   it('normalizes tabs and newlines inside TSV cells', () => {
     const settings = {
       ...DEFAULT_SETTINGS,

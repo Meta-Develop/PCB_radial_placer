@@ -34,6 +34,64 @@ describe('calculatePlacements', () => {
     closeTo(placements[3].y, -10);
   });
 
+  it('keeps right-angle trig results exact for cardinal positions and rotated offsets', () => {
+    const placements = calculatePlacements(settings({ count: 4, radius: 10, centerX: 0, centerY: 0 }));
+
+    expect(placements[1].x).toBe(0);
+    expect(placements[1].targetCenterX).toBe(0);
+    expect(placements[2].y).toBe(0);
+    expect(placements[2].targetCenterY).toBe(0);
+    expect(placements[3].x).toBe(0);
+    expect(placements[3].targetCenterX).toBe(0);
+
+    const yDownPlacements = calculatePlacements(
+      settings({ count: 4, radius: 10, centerX: 0, centerY: 0, coordinateSystem: 'ecadYDown' }),
+    );
+    expect(yDownPlacements[1].x).toBe(0);
+    expect(yDownPlacements[1].targetCenterX).toBe(0);
+    expect(yDownPlacements[1].y).toBe(-10);
+    expect(yDownPlacements[1].targetCenterY).toBe(-10);
+
+    const rotatedOffset = calculatePlacements(
+      settings({
+        count: 1,
+        radius: 10,
+        rotation: { ...DEFAULT_SETTINGS.rotation, mode: 'fixed', fixedRotationDeg: 90, normalize: 'none' },
+        componentOffset: { x: 2, y: 0 },
+      }),
+    )[0];
+
+    expect(rotatedOffset.appliedOffsetX).toBe(0);
+    expect(rotatedOffset.appliedOffsetY).toBe(2);
+    expect(rotatedOffset.x).toBe(10);
+    expect(rotatedOffset.y).toBe(-2);
+  });
+
+  it('snaps near-exact quarter-turn trig results to exact axes', () => {
+    const nearRightAngle = 90 + 1e-12;
+    const placement = calculatePlacements(
+      settings({
+        count: 1,
+        radius: 10,
+        startAngleDeg: nearRightAngle,
+        rotation: {
+          ...DEFAULT_SETTINGS.rotation,
+          mode: 'fixed',
+          fixedRotationDeg: nearRightAngle,
+          normalize: 'none',
+        },
+        componentOffset: { x: 2, y: 0 },
+      }),
+    )[0];
+
+    expect(placement.targetCenterX).toBe(0);
+    expect(placement.targetCenterY).toBe(10);
+    expect(placement.appliedOffsetX).toBe(0);
+    expect(placement.appliedOffsetY).toBe(2);
+    expect(placement.x).toBe(0);
+    expect(placement.y).toBe(8);
+  });
+
   it('applies center offset after polar conversion', () => {
     const placements = calculatePlacements(settings({ count: 4, radius: 10, centerX: 100, centerY: 50 }));
 
