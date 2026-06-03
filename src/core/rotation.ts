@@ -15,26 +15,26 @@ export function normalizeAngle(angleDeg: number, mode: RotationNormalizeMode): n
 }
 
 export function calculateRotation(thetaDeg: number, settings: RotationSettings): number {
-  let rotationDeg: number;
+  let baseRotationDeg: number;
 
   switch (settings.mode) {
     case 'fixed':
-      rotationDeg = settings.fixedRotationDeg;
+      baseRotationDeg = settings.fixedRotationDeg;
       break;
     case 'radialOutward':
-      rotationDeg = thetaDeg + settings.rotationOffsetDeg;
+      baseRotationDeg = thetaDeg;
       break;
     case 'radialInward':
-      rotationDeg = thetaDeg + 180 + settings.rotationOffsetDeg;
+      baseRotationDeg = thetaDeg + 180;
       break;
     case 'tangentClockwise':
-      rotationDeg = thetaDeg - 90 + settings.rotationOffsetDeg;
+      baseRotationDeg = thetaDeg - 90;
       break;
     case 'tangentCounterclockwise':
-      rotationDeg = thetaDeg + 90 + settings.rotationOffsetDeg;
+      baseRotationDeg = thetaDeg + 90;
       break;
     case 'customFormulaSimple':
-      rotationDeg = settings.formulaA * thetaDeg + settings.formulaB;
+      baseRotationDeg = settings.formulaA * thetaDeg + settings.formulaB;
       break;
     default: {
       const exhaustive: never = settings.mode;
@@ -42,5 +42,6 @@ export function calculateRotation(thetaDeg: number, settings: RotationSettings):
     }
   }
 
+  const rotationDeg = baseRotationDeg + settings.rotationOffsetDeg;
   return normalizeAngle(rotationDeg, settings.normalize);
 }

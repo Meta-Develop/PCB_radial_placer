@@ -29,6 +29,11 @@ theta = effectiveStartAngle + index * stepAngle
   can be separated with commas, semicolons, or newlines, and each entry accepts
   the same deterministic numeric expression syntax as other numeric fields.
   `Count` remains authoritative and must match the number of angle entries.
+- Rotation modes first calculate their base rotation: fixed angle, radial
+  outward/inward, tangent clockwise/counterclockwise, or custom
+  `formulaA * theta + formulaB`. `Rotation offset` is then added once after the
+  selected mode, and the result is normalized according to the rotation
+  normalize setting.
 - Output formatting can use fixed decimal places or significant digits.
 - The app exports coordinate data only. It does not edit native ECAD board
   files.

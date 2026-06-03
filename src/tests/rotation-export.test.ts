@@ -29,32 +29,49 @@ describe('rotation calculations', () => {
       calculateRotation(90, { ...DEFAULT_SETTINGS.rotation, mode: 'radialOutward', rotationOffsetDeg: 5 }),
     ).toBe(95);
     expect(
-      calculateRotation(90, { ...DEFAULT_SETTINGS.rotation, mode: 'radialInward', rotationOffsetDeg: 0 }),
-    ).toBe(270);
+      calculateRotation(90, { ...DEFAULT_SETTINGS.rotation, mode: 'radialInward', rotationOffsetDeg: 5 }),
+    ).toBe(275);
     expect(
-      calculateRotation(90, { ...DEFAULT_SETTINGS.rotation, mode: 'tangentClockwise', rotationOffsetDeg: 0 }),
-    ).toBe(0);
+      calculateRotation(90, { ...DEFAULT_SETTINGS.rotation, mode: 'tangentClockwise', rotationOffsetDeg: 5 }),
+    ).toBe(5);
     expect(
       calculateRotation(90, {
         ...DEFAULT_SETTINGS.rotation,
         mode: 'tangentCounterclockwise',
-        rotationOffsetDeg: 0,
+        rotationOffsetDeg: 5,
       }),
-    ).toBe(180);
+    ).toBe(185);
   });
 
-  it('supports fixed and simple formula rotations', () => {
+  it('applies rotation offset to fixed and simple formula rotations', () => {
     expect(
-      calculateRotation(45, { ...DEFAULT_SETTINGS.rotation, mode: 'fixed', fixedRotationDeg: 12 }),
-    ).toBe(12);
+      calculateRotation(45, {
+        ...DEFAULT_SETTINGS.rotation,
+        mode: 'fixed',
+        fixedRotationDeg: 12,
+        rotationOffsetDeg: 5,
+      }),
+    ).toBe(17);
     expect(
       calculateRotation(45, {
         ...DEFAULT_SETTINGS.rotation,
         mode: 'customFormulaSimple',
         formulaA: 2,
         formulaB: 10,
+        rotationOffsetDeg: 5,
       }),
-    ).toBe(100);
+    ).toBe(105);
+  });
+
+  it('normalizes after applying the common rotation offset', () => {
+    expect(
+      calculateRotation(0, {
+        ...DEFAULT_SETTINGS.rotation,
+        mode: 'fixed',
+        fixedRotationDeg: 350,
+        rotationOffsetDeg: 20,
+      }),
+    ).toBe(10);
   });
 });
 

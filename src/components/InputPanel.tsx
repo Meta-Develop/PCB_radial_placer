@@ -115,8 +115,6 @@ function NumericExpressionInput({
 
 export function InputPanel({ settings, onChange, language, text }: InputPanelProps) {
   const isIndividualAngles = settings.angleMode === 'individualAngles';
-  const rotationUsesOffset =
-    settings.rotation.mode !== 'fixed' && settings.rotation.mode !== 'customFormulaSimple';
   const rotationUsesCustomFormula = settings.rotation.mode === 'customFormulaSimple';
   const individualAngles = parseIndividualAngles(settings.individualAnglesText);
   const individualAnglesInvalid = isIndividualAngles && individualAngles.errors.length > 0;
@@ -282,15 +280,13 @@ export function InputPanel({ settings, onChange, language, text }: InputPanelPro
         {settings.rotation.mode === 'fixed'
           ? numericInput('rotation.fixedRotationDeg', text.fixedRotation)
           : null}
-        {rotationUsesOffset
-          ? numericInput('rotation.rotationOffsetDeg', text.rotationOffset)
-          : null}
         {rotationUsesCustomFormula ? (
           <>
             {numericInput('rotation.formulaA', text.formulaA)}
             {numericInput('rotation.formulaB', text.formulaB)}
           </>
         ) : null}
+        {numericInput('rotation.rotationOffsetDeg', text.rotationOffset, text.rotationOffsetHelp)}
         <label>
           {text.normalize}
           <select
