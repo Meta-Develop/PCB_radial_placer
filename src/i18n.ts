@@ -22,6 +22,8 @@ const en = {
   },
   input: {
     heading: 'Placement Inputs',
+    reset: 'Reset',
+    resetAll: 'Reset all',
     geometry: 'Geometry',
     count: 'Count',
     radius: 'Radius',
@@ -223,6 +225,8 @@ const ja: UiText = {
   },
   input: {
     heading: '配置入力',
+    reset: 'リセット',
+    resetAll: '全リセット',
     geometry: 'ジオメトリ',
     count: '個数',
     radius: '半径',
