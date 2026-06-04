@@ -21,10 +21,6 @@ function add(
   messages.push({ severity, field, message });
 }
 
-function rotationModeUsesOffset(settings: PlacementSettings): boolean {
-  return settings.rotation.mode !== 'fixed' && settings.rotation.mode !== 'customFormulaSimple';
-}
-
 function isNumericFieldRelevant(settings: PlacementSettings, field: NumericExpressionField): boolean {
   switch (field) {
     case 'startAngleDeg':
@@ -41,7 +37,7 @@ function isNumericFieldRelevant(settings: PlacementSettings, field: NumericExpre
     case 'rotation.fixedRotationDeg':
       return settings.rotation.mode === 'fixed';
     case 'rotation.rotationOffsetDeg':
-      return rotationModeUsesOffset(settings);
+      return true;
     case 'rotation.formulaA':
     case 'rotation.formulaB':
       return settings.rotation.mode === 'customFormulaSimple';

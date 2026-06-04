@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../core/defaults';
 import { MAX_COMPONENT_COUNT } from '../core/limits';
 import { validateSettings } from '../core/validation';
+import type { RotationMode } from '../types';
 
 const hasField = (result: ReturnType<typeof validateSettings>, field: string): boolean =>
   result.messages.some((message) => message.field === field);
@@ -228,7 +229,7 @@ describe('validateSettings', () => {
     expect(hasField(fixedDecimal, 'decimalPlaces')).toBe(true);
     expect(hasField(fixedDecimal, 'significantDigits')).toBe(false);
     expect(hasField(fixedDecimal, 'rotation.fixedRotationDeg')).toBe(true);
-    expect(hasField(fixedDecimal, 'rotation.rotationOffsetDeg')).toBe(false);
+    expect(hasField(fixedDecimal, 'rotation.rotationOffsetDeg')).toBe(true);
     expect(hasField(fixedDecimal, 'rotation.formulaA')).toBe(false);
     expect(hasField(fixedDecimal, 'rotation.formulaB')).toBe(false);
 
@@ -244,9 +245,30 @@ describe('validateSettings', () => {
     expect(hasField(customFormulaDecimal, 'decimalPlaces')).toBe(true);
     expect(hasField(customFormulaDecimal, 'significantDigits')).toBe(false);
     expect(hasField(customFormulaDecimal, 'rotation.fixedRotationDeg')).toBe(false);
-    expect(hasField(customFormulaDecimal, 'rotation.rotationOffsetDeg')).toBe(false);
+    expect(hasField(customFormulaDecimal, 'rotation.rotationOffsetDeg')).toBe(true);
     expect(hasField(customFormulaDecimal, 'rotation.formulaA')).toBe(true);
     expect(hasField(customFormulaDecimal, 'rotation.formulaB')).toBe(true);
+  });
+
+  it('requires finite rotation offset in every rotation mode', () => {
+    const modes: RotationMode[] = [
+      'fixed',
+      'radialOutward',
+      'radialInward',
+      'tangentClockwise',
+      'tangentCounterclockwise',
+      'customFormulaSimple',
+    ];
+
+    for (const mode of modes) {
+      const result = validateSettings({
+        ...DEFAULT_SETTINGS,
+        rotation: { ...DEFAULT_SETTINGS.rotation, mode, rotationOffsetDeg: Number.NaN },
+      });
+
+      expect(result.valid).toBe(false);
+      expect(hasField(result, 'rotationOffsetDeg')).toBe(true);
+    }
   });
 
   it('requires individual angle entry count to match Count', () => {
