@@ -242,8 +242,19 @@ label {
 }
 
 .input-field {
+  display: grid;
   grid-template-rows: auto auto auto;
   align-content: start;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.field-header,
+.inline-resettable-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .field-label {
@@ -252,6 +263,17 @@ label {
   min-height: 1.1rem;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.field-reset-button {
+  min-height: 1.75rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.76rem;
+  line-height: 1.1;
+}
+
+.reset-all-button {
+  flex: 0 0 auto;
 }
 
 .field-meta {
